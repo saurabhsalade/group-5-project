@@ -8,7 +8,7 @@ Resources:
         Status: Suspended
       AccessControl: Private
       
-  DataStorageBucket2:
+  MyS3Bucket:
     Type: 'AWS::S3::Bucket'
     Properties:
       BucketName: 'datawarehouse-dataops'
