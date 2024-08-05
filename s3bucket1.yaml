@@ -5,5 +5,6 @@ Resources:
     Properties:
       BucketName: 's3-bucket-raw-data-unique-123456'
       VersioningConfiguration:
-        Status: Enabled
+        Status: Suspended
       AccessControl: Private
+      
