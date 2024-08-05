@@ -30,7 +30,7 @@ jobs:
           AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
           AWS_DEFAULT_REGION: us-east-1
 
-      - name: Create CloudFormation Stack
+      - name: Create S3 Bucket
         run: |
           aws cloudformation create-stack --stack-name datalake-datawarehouse --template-body file://s3bucket1.yaml
         env:
