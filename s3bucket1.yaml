@@ -2,5 +2,8 @@ Resources:
   DataStorageBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: S3-bucket-raw-data
+      BucketName: 's3-bucket-raw-data-unique-123456'
+      VersioningConfiguration:
+        Status: Enabled
+      AccessControl: Private
       
