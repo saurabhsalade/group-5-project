@@ -1,17 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-  MyS3Bucket:
-    Type: 'AWS::S3::Bucket'
+  MyS3Bucket1:
+    Type: AWS::S3::Bucket
     Properties:
-      BucketName: 'datalake-dataops'
-      VersioningConfiguration:
-        Status: Suspended
-      AccessControl: Private
-      
-  MyS3Bucket:
-    Type: 'AWS::S3::Bucket'
+      BucketName: snehal-unique-bucket-name-2024-1 # Replace with a globally unique name
+      Tags:
+        - Key: Name
+          Value: SnehalBucket1  # Tag for the S3 bucket
+
+  MyS3Bucket2:
+    Type: AWS::S3::Bucket
     Properties:
-      BucketName: 'datawarehouse-dataops'
-      VersioningConfiguration:
-        Status: Suspended
-      AccessControl: Private
+      BucketName: snehal-unique-bucket-name-2024-2 # Replace with a globally unique name
+      Tags:
+        - Key: Name
+          Value: SnehalBucket2  # Tag for the S3 bucket
