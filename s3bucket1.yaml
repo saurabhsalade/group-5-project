@@ -3,8 +3,15 @@ Resources:
   MyS3Bucket:
     Type: 'AWS::S3::Bucket'
     Properties:
-      BucketName: 's3-bucket-raw-data-unique-123456'
+      BucketName: 'datalake-dataops'
       VersioningConfiguration:
         Status: Suspended
       AccessControl: Private
       
+  DataStorageBucket2:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: 'datawarehouse-dataops'
+      VersioningConfiguration:
+        Status: Suspended
+      AccessControl: Private
