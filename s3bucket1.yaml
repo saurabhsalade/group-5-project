@@ -1,6 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-  DataStorageBucket:
-    Type: AWS::S3::Bucket
+  MyS3Bucket:
+    Type: 'AWS::S3::Bucket'
     Properties:
-      BucketName: s3-bucket-raw-data
-      
+      BucketName: 's3-bucket-raw-data'
+      VersioningConfiguration:
+        Status: Enabled
+      AccessControl: Private
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldObjects
+            Status: Enabled
+            ExpirationInDays: 365
+            Prefix: ""
+      LoggingConfiguration:
+        DestinationBucketName: 's3-bucket-logs'
+        LogFilePrefix: 'access-logs/'
+      BucketPolicy:
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: "*"
+              Action:
+                - "s3:GetObject"
+              Resource: "arn:aws:s3:::s3-bucket-raw-data/*"
