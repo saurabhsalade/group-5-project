@@ -1,24 +1,20 @@
-# Connect to MySQL database:
 import pymysql
-# To structure data in flat file for loading:
 import csv
-# To upload CSV file to S3 bucket:
 import boto3
-import configparser
+import os
 
-parser = configparser.ConfigParser()
-parser.read("pipeline.conf")
-hostname = parser.get("mysql_config", "hostname")
-port = parser.get("mysql_config", "port")
-username = parser.get("mysql_config", "username")
-dbname = parser.get("mysql_config", "database")
-password = parser.get("mysql_config", "password")
+# MySQL Configuration from Environment Variables
+hostname = os.getenv("MYSQL_HOSTNAME")
+port = os.getenv("MYSQL_PORT")
+username = os.getenv("MYSQL_USERNAME")
+dbname = os.getenv("MYSQL_DATABASE")
+password = os.getenv("MYSQL_PASSWORD")
 
 conn = pymysql.connect(host=hostname,
-    user=username,
-    password=password,
-    db=dbname,
-    port=int(port))
+                       user=username,
+                       password=password,
+                       db=dbname,
+                       port=int(port))
 
 if conn is None:
     print("Error connecting to the MySQL database")
@@ -40,19 +36,16 @@ fp.close()
 m_cursor.close()
 conn.close()
 
-# load the aws_boto_credentials values:
-parser = configparser.ConfigParser()
-parser.read("pipeline.conf")
-access_key = parser.get("aws_boto_credentials", "AWS_ACCESS_KEY_ID")
-secret_key = parser.get("aws_boto_credentials", "AWS_SECRET_KEY")
-session_token = parser.get("aws_boto_credentials", "AWS_SECRET_KEY")
-bucket_name = parser.get("aws_boto_credentials", "S3_BUCKET_NAME")
+# AWS Configuration from Environment Variables
+access_key = os.getenv("AWS_ACCESS_KEY_ID")
+secret_key = os.getenv("AWS_SECRET_KEY")
+session_token = os.getenv("AWS_SESSION_TOKEN")
+bucket_name = os.getenv("S3_BUCKET_NAME")
 
 s3 = boto3.client('s3',
-    aws_access_key_id=access_key,
-    aws_secret_access_key=secret_key,
-    aws_session_token=session_token)
-
+                  aws_access_key_id=access_key,
+                  aws_secret_access_key=secret_key,
+                  aws_session_token=session_token)
 
 s3_file = local_filename
 
