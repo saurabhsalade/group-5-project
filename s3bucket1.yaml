@@ -3,15 +3,15 @@ Resources:
   MyS3Bucket1:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: snehal-unique-bucket-name-2024-1 # Replace with a globally unique name
+      BucketName: datalake-dataops # Replace with a globally unique name
       Tags:
         - Key: Name
-          Value: SnehalBucket1  # Tag for the S3 bucket
+          Value: group5-1  # Tag for the S3 bucket
 
   MyS3Bucket2:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: snehal-unique-bucket-name-2024-2 # Replace with a globally unique name
+      BucketName: datawarehouse-dataops # Replace with a globally unique name
       Tags:
         - Key: Name
-          Value: SnehalBucket2  # Tag for the S3 bucket
+          Value: group5-2  # Tag for the S3 bucket
