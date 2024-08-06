@@ -14,7 +14,7 @@ conn = pymysql.connect(host=hostname,
                        user=username,
                        password=password,
                        db=dbname,
-                       port=int(port))
+                       port=port)
 
 if conn is None:
     print("Error connecting to the MySQL database")
