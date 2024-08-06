@@ -5,7 +5,7 @@ on:
 
 jobs:
   Deployment:
-    name: create EC2 Instance
+    name: datalake-datawarehouse-creation
     runs-on: ubuntu-latest
 
     steps:
