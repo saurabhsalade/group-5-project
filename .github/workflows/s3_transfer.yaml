@@ -1,41 +1,32 @@
-name: Run PySpark Script
+name: PySpark Data Ingestion
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
-  pyspark-job:
+  run_pyspark:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Set up Java JDK
-      uses: actions/setup-java@v3
-      with:
-        java-version: '11'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
 
-    - name: Install Spark
-      run: |
-        wget http://www.apache.org/dyn/closer.cgi/spark/spark-3.3.2/spark-3.3.2-bin-hadoop3.tgz
-        tar xvf spark-3.3.2-bin-hadoop3.tgz
-        echo "SPARK_HOME=$(pwd)/spark-3.3.2-bin-hadoop3" >> $GITHUB_ENV
-        echo "$(pwd)/spark-3.3.2-bin-hadoop3/bin" >> $GITHUB_PATH
+      - name: Install dependencies
+        run: |
+          pip install pyspark boto3
 
-    - name: Install PySpark
-      run: |
-        pip install pyspark
-
-    - name: Configure AWS CLI
-      run: |
-        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws configure set aws_session_token ${{ secrets.AWS_SESSION_TOKEN }}
-        aws configure set region ${{ secrets.AWS_REGION }}
-
-    - name: Run PySpark Script
-      run: |
-        spark-submit path/to/your_script.py
+      - name: Run PySpark job
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+        run: |
+          python spark_ingest.py
