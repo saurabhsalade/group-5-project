@@ -6,6 +6,14 @@ aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
 aws_secret_key = os.getenv("AWS_SECRET_KEY")
 aws_session_token = os.getenv("AWS_SESSION_TOKEN")
 
+# Debug print to ensure credentials are fetched correctly
+print(f"AWS_ACCESS_KEY_ID: {aws_access_key}")
+print(f"AWS_SECRET_KEY: {aws_secret_key}")
+print(f"AWS_SESSION_TOKEN: {aws_session_token}")
+
+if not aws_access_key or not aws_secret_key:
+    raise ValueError("AWS credentials are not set properly.")
+
 # Initialize Spark session with S3 configurations
 spark = SparkSession.builder \
     .appName("S3 to S3 Transfer") \
