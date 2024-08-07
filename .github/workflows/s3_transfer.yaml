@@ -29,3 +29,7 @@ jobs:
 
       - name: Run S3 transfer script
         run: python s3_transfer.py
+        
+      - name: Run S3 transfer script
+        run: |
+          spark-submit --packages org.apache.hadoop:hadoop-aws:3.3.1,com.amazonaws:aws-java-sdk-bundle:1.11.888 s3_transfer.py
