@@ -11,6 +11,6 @@ Resources:
       DefaultArguments:
         "--job-language": "python"
       MaxRetries: 0
-      GlueVersion: "2.0"
+      GlueVersion: "4.0"
       WorkerType: "G.1X"
       NumberOfWorkers: 5
