@@ -8,7 +8,7 @@ aws_session_token = os.getenv("AWS_SESSION_TOKEN")
 
 # Debug print to ensure credentials are fetched correctly
 print(f"AWS_ACCESS_KEY_ID: {aws_access_key}")
-print(f"AWS_SECRET_KEY: {aws_secret_key}")
+print(f"AWS_SECRET_ACCESS_KEY: {aws_secret_key}")
 print(f"AWS_SESSION_TOKEN: {aws_session_token}")
 
 if not aws_access_key or not aws_secret_key:
@@ -22,11 +22,12 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.secret.key", aws_secret_key) \
     .config("spark.hadoop.fs.s3a.session.token", aws_session_token) \
     .config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com") \
+    .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.2.0,com.amazonaws:aws-java-sdk-bundle:1.11.271") \
     .getOrCreate()
 
 # Define S3 paths
-source_bucket = "s3://datasource-dataops-group5/vehicles-dataset/"
-destination_bucket = "s3://datalake-dataops-group5/vehicles/"
+source_bucket = "s3a://datasource-dataops-group5/vehicles-dataset/"
+destination_bucket = "s3a://datalake-dataops-group5/vehicles/"
 
 # Read data from the source S3 bucket (CSV format)
 df = spark.read.csv(source_bucket, header=True, inferSchema=True)
