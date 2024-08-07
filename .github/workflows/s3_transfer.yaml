@@ -11,9 +11,9 @@ jobs:
 
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-      AWS_DEFAULT_REGION: 'us-eat-1'  # Replace with your AWS region
+      AWS_DEFAULT_REGION: 'us-east-1'
 
     steps:
     - name: Checkout repository
@@ -27,6 +27,5 @@ jobs:
     - name: Install dependencies
       run: |
         pip install pyspark boto3
-
     - name: Run PySpark script
       run: python s3_transfer.py
