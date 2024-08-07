@@ -32,8 +32,8 @@ jobs:
 
     - name: Download JAR files
       run: |
-        wget https://github.com/SahilTalathi142001/group-5-project/raw/main/hadoop-aws-2.7.3.jar
-        wget https://github.com/SahilTalathi142001/group-5-project/raw/main/aws-java-sdk-1.11.30.jar
+        curl -LO https://github.com/SahilTalathi142001/group-5-project/raw/main/hadoop-aws-2.7.3.jar
+        curl -LO https://github.com/SahilTalathi142001/group-5-project/raw/main/aws-java-sdk-1.11.30.jar
 
     - name: Run PySpark job
       env:
