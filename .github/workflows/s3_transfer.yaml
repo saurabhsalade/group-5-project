@@ -24,11 +24,13 @@ jobs:
       with:
         python-version: '3.8'
 
+    - name: Set up Spark
+      uses: databricks/cli-action@v1.0.4
+
     - name: Install dependencies
-      run: |
-        pip install pyspark boto3
-        wget https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.2.0/hadoop-aws-3.2.0.jar
-        wget https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.271/aws-java-sdk-bundle-1.11.271.jar
+      run: pip install pyspark boto3
 
     - name: Run PySpark script
+      env:
+        PYSPARK_SUBMIT_ARGS: "--packages org.apache.hadoop:hadoop-aws:3.2.0,com.amazonaws:aws-java-sdk-bundle:1.11.271 pyspark-shell"
       run: python s3_transfer.py
