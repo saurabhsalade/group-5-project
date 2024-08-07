@@ -17,8 +17,8 @@ spark = SparkSession.builder \
     .getOrCreate()
 
 # Define S3 paths
-source_bucket = "s3://datasource-dataops-group5/"
-destination_bucket = "s3://datalake-dataops-group5/"
+source_bucket = "s3://datasource-dataops-group5/vehicles.csv/"
+destination_bucket = "s3://datalake-dataops-group5/vehicles/"
 
 # Read data from the source S3 bucket (CSV format)
 df = spark.read.csv(source_bucket, header=True, inferSchema=True)
