@@ -1,17 +1,17 @@
 from pyspark.sql import SparkSession
 
-# Initialize Spark session with Hadoop AWS and AWS SDK configurations
-spark = SparkSession.builder.appName("CSV to Parquet").getOrCreate()
+# Initialize Spark session
+spark = SparkSession.builder \
+    .appName("parquet_example") \
+    .getOrCreate()
 
-# Define S3 paths
-source_bucket = "s3a://datasource-dataops/vehicles/"
-destination_bucket = "s3a://datalake-dataops/vehicles"
+def write_parquet_file():
+    # Read data from S3
+    df = spark.read.csv('s3://datasource-dataops-group5/vehicles-dataset/vehicles.csv', header=True)
+    
+    # Write data to another S3 bucket
+    df.repartition(1).write.mode('overwrite').parquet('s3://datalake-dataops-group5/')
 
-# Read data from the source S3 bucket (CSV format)
-df = spark.read.csv(source_bucket, header=True, inferSchema=True)
-
-# Write data to the destination S3 bucket (Parquet format)
-df.write.mode("overwrite").parquet(destination_bucket)
-
-# Stop Spark session
-spark.stop()
+if __name__ == "__main__":
+    write_parquet_file()
+   
