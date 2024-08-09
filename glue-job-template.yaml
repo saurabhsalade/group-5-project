@@ -15,10 +15,10 @@ Resources:
       NumberOfWorkers: 10
       WorkerType: "G.1X"
 
-  PreProcessingJob:
+  DataOpsGluePreProcessingJob:
     Type: AWS::Glue::Job
     Properties:
-      Name: "glue-job-preprocessing"
+      Name: "dataops-glue-preprocessing-job"
       Role: "arn:aws:iam::233359079168:role/LabRole"
       Command:
         Name: "glueetl"
@@ -27,3 +27,30 @@ Resources:
       GlueVersion: "4.0"
       NumberOfWorkers: 10
       WorkerType: "G.1X"
+
+  DataOpsIngestionToPreProcessingTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Name: "dataops-glue-trigger-ingestion-to-preprocessing"
+      Description: "Trigger to start preprocessing job after ingestion job completes"
+      Type: CONDITIONAL
+      Actions:
+        - JobName: "dataops-glue-preprocessing-job"
+      Predicate:
+        Conditions:
+          - LogicalOperator: EQUALS
+            JobName: "dataops-glue-ingestion-job"
+            State: SUCCEEDED
+
+Outputs:
+  IngestionJobName:
+    Value: "dataops-glue-ingestion-job"
+    Description: "The name of the ingestion job"
+
+  PreProcessingJobName:
+    Value: "dataops-glue-preprocessing-job"
+    Description: "The name of the preprocessing job"
+
+  TriggerName:
+    Value: "dataops-glue-trigger-ingestion-to-preprocessing"
+    Description: "The name of the trigger"
