@@ -1,33 +1,63 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Resources:
-  GlueJobIngestion:
-    Type: AWS::Glue::Job
-    Properties:
-      Name: "glue-job-ingestion"
-      Role: "arn:aws:iam::233359079168:role/LabRole"  # Replace with the ARN of the 'Lab Role'
-      Command:
-        Name: "glueetl"
-        ScriptLocation: "s3://datasource-dataops-group5/script-ingestion/ingestion.py"  # Update with your S3 path
-      DefaultArguments:
-        "--job-language": "python"
-      MaxRetries: 0
-      GlueVersion: "4.0"
-      WorkerType: "G.1X"
-      NumberOfWorkers: 5
+Description: Orchestrate Data Ingestion and Preprocessing Jobs in AWS Glue
 
-  GlueJobTransformation:
+Resources:
+  # Create the AWS Glue ingestion job
+  DataOpsGlueIngestionJob:
     Type: AWS::Glue::Job
     Properties:
-      Name: "glue-job-transformation"
-      Role: "arn:aws:iam::233359079168:role/LabRole"  # Replace with the ARN of the 'Lab Role'
+      Name: dataops-glue-ingestion-job
+      Role: arn:aws:iam::233359079168:role/LabRole
       Command:
-        Name: "glueetl"
-        ScriptLocation: "s3://datalake-dataops-group5/script-transformation/pre_processing.py"  # Update with your S3 path
-      DefaultArguments:
-        "--job-language": "python"
-        "--additional-python-modules": "pandas==1.1.0,pyarrow==2,awswrangler==2.7.0"  # Add any required modules here
-      MaxRetries: 0
-      GlueVersion: "4.0"
-      WorkerType: "G.1X"
-      NumberOfWorkers: 5
-      Timeout: 288  # Optional: Set a timeout (in minutes) for the job
+        Name: glueetl
+        ScriptLocation: s3://datasource-dataops-group5/script-ingestion/ingestion.py
+        PythonVersion: 3
+      GlueVersion: '4.0'
+      MaxCapacity: 2.0
+      Timeout: 288  # 48 hours
+      NumberOfWorkers: 10
+      WorkerType: G.1X
+
+  # Create the AWS Glue preprocessing job
+  DataOpsGluePreProcessingJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: dataops-glue-preprocessing-job
+      Role: arn:aws:iam::233359079168:role/LabRole
+      Command:
+        Name: glueetl
+        ScriptLocation: s3://datalake-dataops-group5/script-preprocessing/pre_processing.py
+        PythonVersion: 3
+      GlueVersion: '4.0'
+      MaxCapacity: 2.0
+      Timeout: 288  # 48 hours
+      NumberOfWorkers: 10
+      WorkerType: G.1X
+
+  # Create a trigger to start preprocessing after ingestion job completes
+  DataOpsIngestionToPreProcessingTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Name: dataops-glue-trigger-ingestion-to-preprocessing
+      Description: Trigger to start preprocessing job after ingestion job completes
+      Type: CONDITIONAL
+      Actions:
+        - JobName: dataops-glue-preprocessing-job
+      Predicate:
+        Conditions:
+          - LogicalOperator: EQUALS
+            JobName: dataops-glue-ingestion-job
+            State: SUCCEEDED
+
+Outputs:
+  IngestionJobName:
+    Value: dataops-glue-ingestion-job
+    Description: The name of the ingestion job
+
+  PreProcessingJobName:
+    Value: dataops-glue-preprocessing-job
+    Description: The name of the preprocessing job
+
+  TriggerName:
+    Value: dataops-glue-trigger-ingestion-to-preprocessing
+    Description: The name of the trigger
