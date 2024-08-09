@@ -1,4 +1,4 @@
-name: Deploy CloudFormation and Run AWS Glue Job
+name: Deploy CloudFormation and Run AWS Glue Jobs
 
 on:
   push:
@@ -22,22 +22,17 @@ jobs:
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Upload Python script to S3
+    - name: Upload Python scripts to S3
       run: |
         aws s3 cp ingestion.py s3://datasource-dataops-group5/script-ingestion/
         aws s3 cp pre_processing.py s3://datalake-dataops-group5/script-preprocessing/
-
     - name: Deploy CloudFormation stack
       run: |
         aws cloudformation deploy \
           --template-file glue-job-template.yaml \
-          --stack-name glue-job-stack-workflow \
+          --stack-name dataops-glue-job-stack \
           --capabilities CAPABILITY_IAM
 
-    - name: Describe CloudFormation Stack Events
+    - name: Start Ingestion Glue Job
       run: |
-        aws cloudformation describe-stack-events --stack-name glue-job-stack-workflow
-
-    - name: Start Glue Job
-      run: |
-        aws glue start-job-run --job-name glue-job-ingestion-preprocessing
+        aws glue start-job-run --job-name dataops-glue-ingestion-job
