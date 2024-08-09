@@ -35,30 +35,30 @@ Resources:
       WorkerType: G.1X
 
   # Create a trigger to start preprocessing after ingestion job completes
-  IngestionToPreProcessingTrigger:
-    Type: AWS::Glue::Trigger
-    Properties:
-      Name: glue-trigger-ingestion-preprocessing
-      Description: Trigger to start preprocessing job after ingestion job completes
-      Type: CONDITIONAL
-      Actions:
-        - JobName: glue-job-preprocessing
-      Predicate:
-        Conditions:
-          - LogicalOperator: EQUALS
-            JobName: glue-job-ingestion-group5
-            State: SUCCEEDED
+#   IngestionToPreProcessingTrigger:
+#     Type: AWS::Glue::Trigger
+#     Properties:
+#       Name: glue-trigger-ingestion-preprocessing
+#       Description: Trigger to start preprocessing job after ingestion job completes
+#       Type: CONDITIONAL
+#       Actions:
+#         - JobName: glue-job-preprocessing
+#       Predicate:
+#         Conditions:
+#           - LogicalOperator: EQUALS
+#             JobName: glue-job-ingestion-group5
+#             State: SUCCEEDED
 
-Outputs:
-  IngestionJobName:
-    Value: glue-job-ingestion-group5
-    Description: The name of the ingestion job
+# Outputs:
+#   IngestionJobName:
+#     Value: glue-job-ingestion-group5
+#     Description: The name of the ingestion job
 
-  PreProcessingJobName:
-    Value: glue-job-preprocessing
-    Description: The name of the preprocessing job
+#   PreProcessingJobName:
+#     Value: glue-job-preprocessing
+#     Description: The name of the preprocessing job
 
-  TriggerName:
-    Value: glue-trigger-ingestion-preprocessing
-    Description: The name of the trigger
+#   TriggerName:
+#     Value: glue-trigger-ingestion-preprocessing
+#     Description: The name of the trigger
 
