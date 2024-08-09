@@ -9,8 +9,21 @@ Resources:
       Role: "arn:aws:iam::233359079168:role/LabRole"
       Command:
         Name: "glueetl"
-        ScriptLocation: s3://datasource-dataops-group5/script-ingestion/ingestion.py
-        PythonVersion: 3
-      GlueVersion: '4.0'
+        ScriptLocation: "s3://datasource-dataops-group5/script-ingestion/ingestion.py"
+        PythonVersion: "3"
+      GlueVersion: "4.0"
+      NumberOfWorkers: 10
+      WorkerType: "G.1X"
+
+  PreProcessingJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: "glue-job-preprocessing"
+      Role: "arn:aws:iam::233359079168:role/LabRole"
+      Command:
+        Name: "glueetl"
+        ScriptLocation: "s3://datalake-dataops-group5/script-preprocessing/pre_processing.py"
+        PythonVersion: "3"
+      GlueVersion: "4.0"
       NumberOfWorkers: 10
       WorkerType: "G.1X"
