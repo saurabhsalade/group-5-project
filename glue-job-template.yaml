@@ -29,19 +29,19 @@ Resources:
       WorkerType: "G.1X"
 
   DataOpsIngestionToPreProcessingTrigger:
-    Type: AWS::Glue::Trigger
-    Properties:
-      Name: "dataops-glue-trigger-ingestion-to-preprocessing"
-      Description: "Trigger to start preprocessing job after ingestion job completes"
-      Type: CONDITIONAL
-      Actions:
-        - JobName: "dataops-glue-preprocessing-job"
-      Predicate:
-        Conditions:
-          - LogicalOperator: EQUALS
-            JobName: "dataops-glue-ingestion-job"
-            State: SUCCEEDED
-      StartOnCreation: true
-      Tags:
-        - Key: "Environment"
-          Value: "Production"
+  Type: AWS::Glue::Trigger
+  Properties:
+    Name: "dataops-glue-trigger-ingestion-to-preprocessing"
+    Description: "Trigger to start preprocessing job after ingestion job completes"
+    Type: CONDITIONAL
+    StartOnCreation: true
+    Actions:
+      - JobName: "dataops-glue-preprocessing-job"
+    Predicate:
+      Conditions:
+        - JobName: "dataops-glue-ingestion-job"
+          LogicalOperator: EQUALS
+          State: SUCCEEDED
+    Tags:
+      - Key: "Environment"
+        Value: "Production"
