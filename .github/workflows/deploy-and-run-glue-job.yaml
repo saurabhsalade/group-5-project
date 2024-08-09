@@ -34,6 +34,10 @@ jobs:
           --stack-name glue-job-stack-workflow \
           --capabilities CAPABILITY_IAM
 
+    - name: Describe CloudFormation Stack Events
+      run: |
+        aws cloudformation describe-stack-events --stack-name glue-job-stack-workflow
+
     - name: Start Glue Job
       run: |
         aws glue start-job-run --job-name glue-job-ingestion-preprocessing
