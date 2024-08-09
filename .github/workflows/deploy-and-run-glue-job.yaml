@@ -36,7 +36,7 @@ jobs:
         aws cloudformation deploy \
           --template-file glue-job-template.yaml \
           --stack-name dataops-glue-job-stack \
-          --capabilities CAPABILITY_IAM
+          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 
     - name: Start Ingestion Glue Job
       run: |
