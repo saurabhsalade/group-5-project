@@ -1,16 +1,64 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Description: Orchestrate Ingestion and PreProcessing Jobs in AWS Glue
+
 Resources:
-  GlueJob:
+  # Create the AWS Glue ingestion job
+  IngestionJob:
     Type: AWS::Glue::Job
     Properties:
-      Name: "glue-job-ingestion"
-      Role: "arn:aws:iam::233359079168:role/LabRole"  # Replace with the ARN of the 'Lab Role'
+      Name: glue-job-ingestion
+      Role: arn:aws:iam::233359079168:role/LabRole
       Command:
-        Name: "glueetl"
-        ScriptLocation: "s3://datasource-dataops-group5/script-ingestion/ingestion.py"  # Update with your S3 path
-      DefaultArguments:
-        "--job-language": "python"
-      MaxRetries: 0
-      GlueVersion: "4.0"
-      WorkerType: "G.1X"
-      NumberOfWorkers: 5
+        Name: glueetl
+        ScriptLocation: s3://datasource-dataops-group5/script-ingestion/ingestion.py
+        PythonVersion: 3
+      GlueVersion: '4.0'
+      MaxCapacity: 2.0
+      Timeout: 2880  # 48 hours
+      NumberOfWorkers: 10
+      WorkerType: G.1X
+
+  # Create the AWS Glue preprocessing job
+  PreProcessingJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: glue-job-preprocessing
+      Role: arn:aws:iam::233359079168:role/LabRole
+      Command:
+        Name: glueetl
+        ScriptLocation: s3://datasource-dataops-group5/script-preprocessing/preprocessing.py
+        PythonVersion: 3
+      GlueVersion: '4.0'
+      MaxCapacity: 2.0
+      Timeout: 2880  # 48 hours
+      NumberOfWorkers: 10
+      WorkerType: G.1X
+
+  # Create a trigger to start preprocessing after ingestion job completes
+  IngestionToPreProcessingTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Name: glue-trigger-ingestion-preprocessing
+      Description: Trigger to start preprocessing job after ingestion job completes
+      Type: CONDITIONAL
+      Actions:
+        - JobName: glue-job-preprocessing
+      Predicate:
+        Conditions:
+          - LogicalOperator: EQUALS
+            JobName: glue-job-ingestion
+            State: SUCCEEDED
+
+Outputs:
+  IngestionJobName:
+    Value: glue-job-ingestion
+    Description: The name of the ingestion job
+
+  PreProcessingJobName:
+    Value: glue-job-preprocessing
+    Description: The name of the preprocessing job
+
+  TriggerName:
+    Value: glue-trigger-ingestion-preprocessing
+    Description: The name of the trigger
+
