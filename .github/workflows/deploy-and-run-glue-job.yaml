@@ -26,6 +26,11 @@ jobs:
       run: |
         aws s3 cp ingestion.py s3://datasource-dataops-group5/script-ingestion/
         aws s3 cp pre_processing.py s3://datalake-dataops-group5/script-preprocessing/
+
+    - name: Validate CloudFormation template
+      run: |
+        aws cloudformation validate-template --template-body file://glue-job-template.yaml
+
     - name: Deploy CloudFormation stack
       run: |
         aws cloudformation deploy \
