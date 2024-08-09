@@ -18,7 +18,12 @@ source_s3_path = "s3://datasource-dataops-group5/vehicles-dataset/"
 target_s3_path = "s3://datalake-dataops-group5/vehicles/"
 
 # Read the data from the source S3 bucket
-datasource0 = glueContext.create_dynamic_frame.from_options("s3", {'paths': [source_s3_path]}, format="csv")
+datasource0 = glueContext.create_dynamic_frame.from_options(
+    "s3", 
+    {'paths': [source_s3_path], 'recurse': True, 'groupFiles': 'inPartition'},
+    format="csv", 
+    format_options={"withHeader": True, "separator": ","}
+)
 
 # Convert the dynamic frame to a Spark DataFrame
 df = datasource0.toDF()
