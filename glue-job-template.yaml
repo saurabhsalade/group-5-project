@@ -6,7 +6,7 @@ Resources:
   IngestionJob:
     Type: AWS::Glue::Job
     Properties:
-      Name: glue-job-ingestion
+      Name: glue-job-ingestion-group5
       Role: arn:aws:iam::233359079168:role/LabRole
       Command:
         Name: glueetl
@@ -46,12 +46,12 @@ Resources:
       Predicate:
         Conditions:
           - LogicalOperator: EQUALS
-            JobName: glue-job-ingestion
+            JobName: glue-job-ingestion-group5
             State: SUCCEEDED
 
 Outputs:
   IngestionJobName:
-    Value: glue-job-ingestion
+    Value: glue-job-ingestion-group5
     Description: The name of the ingestion job
 
   PreProcessingJobName:
