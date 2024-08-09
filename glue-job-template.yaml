@@ -45,4 +45,3 @@ Resources:
       Tags:
         - Key: "Environment"
           Value: "Production"
-      WorkflowName: "dataops-glue-workflow"
