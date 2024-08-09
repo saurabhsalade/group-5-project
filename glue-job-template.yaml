@@ -26,7 +26,7 @@ Resources:
       Role: arn:aws:iam::233359079168:role/LabRole
       Command:
         Name: glueetl
-        ScriptLocation: s3://datalake-dataops-group5/script-preprocessing/preprocessing.py
+        ScriptLocation: s3://datalake-dataops-group5/script-preprocessing/pre_processing.py
         PythonVersion: 3
       GlueVersion: '4.0'
       MaxCapacity: 2.0
@@ -61,4 +61,3 @@ Resources:
 #   TriggerName:
 #     Value: glue-trigger-ingestion-preprocessing
 #     Description: The name of the trigger
-
