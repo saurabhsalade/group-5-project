@@ -3,20 +3,20 @@ Description: Orchestrate Data Ingestion and Preprocessing Jobs in AWS Glue
 
 Resources:
   # Create the AWS Glue ingestion job
-  DataOpsGlueIngestionJob:
-    Type: AWS::Glue::Job
-    Properties:
-      Name: dataops-glue-ingestion-job
-      Role: arn:aws:iam::233359079168:role/LabRole
-      Command:
-        Name: glueetl
-        ScriptLocation: s3://datasource-dataops-group5/script-ingestion/ingestion.py
-        PythonVersion: 3
-      GlueVersion: '4.0'
-      MaxCapacity: 2.0
-      Timeout: 288  # 48 hours
-      NumberOfWorkers: 10
-      WorkerType: G.1X
+  # DataOpsGlueIngestionJob:
+  #   Type: AWS::Glue::Job
+  #   Properties:
+  #     Name: dataops-glue-ingestion-job
+  #     Role: arn:aws:iam::233359079168:role/LabRole
+  #     Command:
+  #       Name: glueetl
+  #       ScriptLocation: s3://datasource-dataops-group5/script-ingestion/ingestion.py
+  #       PythonVersion: 3
+  #     GlueVersion: '4.0'
+  #     MaxCapacity: 2.0
+  #     Timeout: 288  # 48 hours
+  #     NumberOfWorkers: 10
+  #     WorkerType: G.1X
 
   # Create the AWS Glue preprocessing job
   DataOpsGluePreProcessingJob:
