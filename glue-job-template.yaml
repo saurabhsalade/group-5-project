@@ -2,11 +2,54 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Orchestrate Data Ingestion and Preprocessing Jobs in AWS Glue
 
 Resources:
+  LabRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "LabRole"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: glue.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: "GlueJobPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - glue:CreateJob
+                  - glue:StartJobRun
+                  - glue:GetJob
+                  - glue:UpdateJob
+                  - glue:CreateTrigger
+                  - glue:UpdateTrigger
+                  - glue:DeleteTrigger
+                  - glue:GetTrigger
+                  - glue:StartTrigger
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource:
+                  - "arn:aws:s3:::datasource-dataops-group5/*"
+                  - "arn:aws:s3:::datalake-dataops-group5/*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+
   DataOpsGlueIngestionJob:
     Type: AWS::Glue::Job
     Properties:
       Name: "dataops-glue-ingestion-job"
-      Role: "arn:aws:iam::233359079168:role/LabRole"
+      Role: !GetAtt LabRole.Arn
       Command:
         Name: "glueetl"
         ScriptLocation: "s3://datasource-dataops-group5/script-ingestion/ingestion.py"
@@ -19,7 +62,7 @@ Resources:
     Type: AWS::Glue::Job
     Properties:
       Name: "dataops-glue-preprocessing-job"
-      Role: "arn:aws:iam::233359079168:role/LabRole"
+      Role: !GetAtt LabRole.Arn
       Command:
         Name: "glueetl"
         ScriptLocation: "s3://datalake-dataops-group5/script-preprocessing/pre_processing.py"
