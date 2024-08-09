@@ -25,14 +25,15 @@ jobs:
     - name: Upload Python script to S3
       run: |
         aws s3 cp ingestion.py s3://datasource-dataops-group5/script-ingestion/
+	      aws s3 cp pre_processing.py s3://datalake-dataops-group5/script-preprocessing/
 
     - name: Deploy CloudFormation stack
       run: |
         aws cloudformation deploy \
           --template-file glue-job-template.yaml \
-          --stack-name glue-job-stack \
+          --stack-name glue-job-stack-workflow \
           --capabilities CAPABILITY_IAM
 
     - name: Start Glue Job
       run: |
-        aws glue start-job-run --job-name glue-job-ingestion
+        aws glue start-job-run --job-name glue-job-ingestion-preprocessing
