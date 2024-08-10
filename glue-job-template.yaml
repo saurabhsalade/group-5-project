@@ -15,6 +15,7 @@ Resources:
   #     NumberOfWorkers: 10
   #     WorkerType: "G.1X"
 
+  Resources:
   DataOpsGluePreProcessingJob:
     Type: AWS::Glue::Job
     Properties:
@@ -27,6 +28,7 @@ Resources:
       GlueVersion: "4.0"
       NumberOfWorkers: 10
       WorkerType: "G.1X"
+
 
   # DataOpsIngestionToPreProcessingTrigger:
   #   Type: AWS::Glue::Trigger
