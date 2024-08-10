@@ -15,7 +15,6 @@ Resources:
   #     NumberOfWorkers: 10
   #     WorkerType: "G.1X"
 
-  Resources:
   DataOpsGluePreProcessingJob:
     Type: AWS::Glue::Job
     Properties:
