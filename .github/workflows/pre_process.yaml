@@ -1,0 +1,42 @@
+name: Deploy CloudFormation and Run AWS Glue Jobs
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up AWS CLI
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Upload Python scripts to S3
+      run: |
+        aws s3 cp pre_processing.py s3://datalake-dataops-group5/script-preprocessing/
+
+    - name: Validate CloudFormation template
+      run: |
+        aws cloudformation validate-template --template-body file://glue-job-template.yaml
+
+    - name: Deploy CloudFormation stack
+      run: |
+        aws cloudformation deploy \
+          --template-file glue-job-template.yaml \
+          --stack-name dataops-glue-job-stack \
+          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+
+    - name: Start Pre-Processing Glue Job
+      run: |
+        aws glue start-job-run --job-name dataops-glue-preprocessing-job
