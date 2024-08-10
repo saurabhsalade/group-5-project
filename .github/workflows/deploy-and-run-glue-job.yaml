@@ -50,8 +50,3 @@ jobs:
     - name: Start Pre-Processing Glue Job
       run: |
         aws glue start-job-run --job-name dataops-glue-preprocessing-job
-
-    - name: Wait for Pre-Processing Glue Job to complete
-      run: |
-        aws glue get-job-run --job-name dataops-glue-preprocessing-job --run-id $(aws glue list-job-runs --job-name dataops-glue-preprocessing-job --query 'JobRuns[0].Id' --output text) \
-        | jq -r '.JobRun.JobRunState' | grep 'SUCCEEDED'
