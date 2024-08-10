@@ -38,6 +38,20 @@ jobs:
           --stack-name dataops-glue-job-stack \
           --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 
-    - name: Start Ingestion Glue Job
+    # - name: Start Ingestion Glue Job
+    #   run: |
+    #     aws glue start-job-run --job-name dataops-glue-ingestion-job
+
+    # - name: Wait for Ingestion Glue Job to complete
+    #   run: |
+    #     aws glue get-job-run --job-name dataops-glue-ingestion-job --run-id $(aws glue list-job-runs --job-name dataops-glue-ingestion-job --query 'JobRuns[0].Id' --output text) \
+    #     | jq -r '.JobRun.JobRunState' | grep 'SUCCEEDED'
+
+    - name: Start Pre-Processing Glue Job
       run: |
-        aws glue start-job-run --job-name dataops-glue-ingestion-job
+        aws glue start-job-run --job-name dataops-glue-preprocessing-job
+
+    - name: Wait for Pre-Processing Glue Job to complete
+      run: |
+        aws glue get-job-run --job-name dataops-glue-preprocessing-job --run-id $(aws glue list-job-runs --job-name dataops-glue-preprocessing-job --query 'JobRuns[0].Id' --output text) \
+        | jq -r '.JobRun.JobRunState' | grep 'SUCCEEDED'
