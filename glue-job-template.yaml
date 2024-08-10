@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Orchestrate Data Ingestion and Preprocessing Jobs in AWS Glue
+Description: Orchestrate Data Preprocessing Job in AWS Glue
 
 Resources:
   # DataOpsGlueIngestionJob:
