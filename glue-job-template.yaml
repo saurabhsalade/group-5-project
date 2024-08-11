@@ -31,11 +31,6 @@ Resources:
         '--TempDir': 's3://datalake-dataops-group5-temp/temp/'
         '--job-language': 'python'
 
-Outputs:
-  PreProcessingJobName:
-    Description: 'Name of the Glue Pre-Processing Job'
-    Value: !Ref DataOpsGluePreProcessingJob
-
   DataOpsIngestionToPreProcessingTrigger:
     Type: AWS::Glue::Trigger
     DependsOn:
@@ -56,3 +51,8 @@ Outputs:
       Tags:
         - Key: "Environment"
           Value: "Production"
+
+Outputs:
+  PreProcessingJobName:
+    Description: 'Name of the Glue Pre-Processing Job'
+    Value: !Ref DataOpsGluePreProcessingJob
