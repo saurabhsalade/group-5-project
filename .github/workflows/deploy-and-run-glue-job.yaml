@@ -39,9 +39,27 @@ jobs:
           --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 
     - name: Start Ingestion Glue Job
+      id: start_ingestion_job
       run: |
-        aws glue start-job-run --job-name dataops-glue-ingestion-job
+        ingestion_job_run_id=$(aws glue start-job-run --job-name dataops-glue-ingestion-job --query 'JobRunId' --output text)
+        echo "Ingestion job run ID: $ingestion_job_run_id"
+        echo "INGESTION_JOB_RUN_ID=$ingestion_job_run_id" >> $GITHUB_ENV
 
+    - name: Wait for Ingestion Glue Job to Complete
+      run: |
+        while true; do
+          status=$(aws glue get-job-run --job-name dataops-glue-ingestion-job --run-id ${{ env.INGESTION_JOB_RUN_ID }} --query 'JobRun.JobRunState' --output text)
+          if [ "$status" == "SUCCEEDED" ]; then
+            echo "Ingestion job completed successfully."
+            break
+          elif [ "$status" == "FAILED" ] || [ "$status" == "STOPPED" ]; then
+            echo "Ingestion job failed or was stopped."
+            exit 1
+          else
+            echo "Ingestion job is still running. Waiting..."
+            sleep 60
+          fi
+        done
 
     - name: Start Pre-Processing Glue Job
       run: |
