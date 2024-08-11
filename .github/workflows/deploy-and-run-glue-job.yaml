@@ -1,5 +1,4 @@
 name: Deploy CloudFormation and Run AWS Glue Workflow
-
 on:
   push:
     branches:
@@ -9,7 +8,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -36,8 +34,20 @@ jobs:
         aws cloudformation deploy \
           --template-file glue-job-template.yaml \
           --stack-name dataops-glue-job-stack \
-          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
+          --no-fail-on-empty-changeset
+
+    - name: Get Workflow Name
+      id: get-workflow-name
+      run: |
+        WORKFLOW_NAME=$(aws cloudformation describe-stacks --stack-name dataops-glue-job-stack --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" --output text)
+        echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_OUTPUT
 
     - name: Start Glue Workflow
       run: |
-        aws glue start-workflow-run --name dataops-glue-workflow
+        WORKFLOW_RUN_ID=$(aws glue start-workflow-run --name ${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }} --query 'RunId' --output text)
+        echo "Workflow run ID: $WORKFLOW_RUN_ID"
+
+    - name: Wait for Workflow Completion
+      run: |
+        aws glue get-workflow-run --name ${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }} --run-id $WORKFLOW_RUN_ID --include-graph
