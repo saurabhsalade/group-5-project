@@ -1,14 +1,14 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
   # MyS3Bucket1:
-  #   Type: AWS::S3::Bucket
-  #   Properties:
-  #     BucketName: datalake-dataops-group5 # Replace with a globally unique name
-  #     VersioningConfiguration:
-  #       Status: Suspended
-  #     Tags:
-  #       - Key: Name
-  #         Value: group5-1  # Tag for the S3 bucket
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: datalake-dataops-group5 # Replace with a globally unique name
+      VersioningConfiguration:
+        Status: Suspended
+      Tags:
+        - Key: Name
+          Value: group5-1  # Tag for the S3 bucket
 
   MyS3Bucket2:
     Type: AWS::S3::Bucket
