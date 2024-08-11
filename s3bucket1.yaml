@@ -3,7 +3,7 @@ Resources:
   MyS3Bucket1:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: datalake-dataops-group5 # Replace with a globally unique name
+      BucketName: datalake-dataops-group5-bucket # Replace with a globally unique name
       VersioningConfiguration:
         Status: Suspended
       Tags:
@@ -13,7 +13,7 @@ Resources:
   MyS3Bucket2:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: datawarehouse-dataops-group5 # Replace with a globally unique name
+      BucketName: datawarehouse-dataops-group5-bucket # Replace with a globally unique name
       VersioningConfiguration:
         Status: Suspended
       Tags:
