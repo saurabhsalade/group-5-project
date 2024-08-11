@@ -23,6 +23,8 @@ Resources:
       NumberOfWorkers: 10
       WorkerType: "G.1X"
       MaxRetries: 1
+      # Add a schedule if needed
+      # Schedule: cron(0 12 * * ? *) 
 
   # Define the Preprocessing Job
   DataOpsGluePreProcessingJob:
@@ -48,6 +50,7 @@ Resources:
     Properties:
       Name: "dataops-glue-trigger-start-ingestion"
       Type: ON_DEMAND
+      StartOnCreation: true
       Actions:
         - JobName: !Ref DataOpsGlueIngestionJob
 
