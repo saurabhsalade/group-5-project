@@ -9,7 +9,7 @@ Resources:
       Role: "arn:aws:iam::233359079168:role/LabRole"
       Command:
         Name: "glueetl"
-        ScriptLocation: "s3://datasource-dataops-group5/script-ingestion/ingestion.py"
+        ScriptLocation: "s3://datasource-dataops-group5-bucket/script-ingestion/ingestion.py"
         PythonVersion: "3"
       GlueVersion: "4.0"
       NumberOfWorkers: 10
@@ -22,13 +22,13 @@ Resources:
       Role: "arn:aws:iam::233359079168:role/LabRole"
       Command:
         Name: "glueetl"
-        ScriptLocation: "s3://datalake-dataops-group5/script-preprocessing/pre_processing.py"
+        ScriptLocation: "s3://datalake-dataops-group5-bucket/script-preprocessing/pre_processing.py"
         PythonVersion: "3"
       GlueVersion: "4.0"
       NumberOfWorkers: 10
       WorkerType: "G.1X"
       DefaultArguments:
-        '--TempDir': 's3://datalake-dataops-group5-temp/temp/'
+        '--TempDir': 's3://datalake-dataops-group5-bucket-temp/temp/'
         '--job-language': 'python'
 
   DataOpsIngestionToPreProcessingTrigger:
