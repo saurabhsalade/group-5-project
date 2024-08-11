@@ -1,7 +1,15 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Orchestrate Data Preprocessing Job in AWS Glue
+Description: Orchestrate Data Ingestion and Preprocessing Jobs in AWS Glue using Workflow
 
 Resources:
+  # Define the Glue Workflow
+  DataOpsGlueWorkflow:
+    Type: AWS::Glue::Workflow
+    Properties:
+      Name: "dataops-glue-workflow"
+      Description: "Workflow to orchestrate ingestion and preprocessing jobs"
+
+  # Define the Ingestion Job
   DataOpsGlueIngestionJob:
     Type: AWS::Glue::Job
     Properties:
@@ -14,7 +22,9 @@ Resources:
       GlueVersion: "4.0"
       NumberOfWorkers: 10
       WorkerType: "G.1X"
+      MaxRetries: 1
 
+  # Define the Preprocessing Job
   DataOpsGluePreProcessingJob:
     Type: AWS::Glue::Job
     Properties:
@@ -30,22 +40,28 @@ Resources:
       DefaultArguments:
         '--TempDir': 's3://datalake-dataops-group5-bucket-temp/temp/'
         '--job-language': 'python'
+      MaxRetries: 1
 
-  DataOpsGlueWorkflow:
-    Type: AWS::Glue::Workflow
+  # Trigger for starting the Ingestion Job
+  DataOpsStartIngestionTrigger:
+    Type: AWS::Glue::Trigger
     Properties:
-      Name: "dataops-glue-workflow"
-      Description: "Workflow to orchestrate ingestion and preprocessing jobs"
+      Name: "dataops-glue-trigger-start-ingestion"
+      Type: ON_DEMAND
+      StartOnCreation: true
+      WorkflowName: !Ref DataOpsGlueWorkflow
+      Actions:
+        - JobName: !Ref DataOpsGlueIngestionJob
 
+  # Trigger for starting Preprocessing Job after Ingestion Job completes successfully
   DataOpsIngestionToPreProcessingTrigger:
     Type: AWS::Glue::Trigger
-    DependsOn:
-      - DataOpsGlueIngestionJob
     Properties:
       Name: "dataops-glue-trigger-ingestion-to-preprocessing"
       Description: "Trigger to start preprocessing job after ingestion job completes"
       Type: CONDITIONAL
       StartOnCreation: true
+      WorkflowName: !Ref DataOpsGlueWorkflow
       Actions:
         - JobName: !Ref DataOpsGluePreProcessingJob
       Predicate:
@@ -54,21 +70,11 @@ Resources:
             LogicalOperator: EQUALS
             State: SUCCEEDED
 
-  DataOpsGlueWorkflowStartTrigger:
-    Type: AWS::Glue::Trigger
-    Properties:
-      Name: "dataops-glue-start-trigger"
-      Type: ON_DEMAND
-      Actions:
-        - WorkflowRunProperties:
-            WorkflowName: !Ref DataOpsGlueWorkflow
-      StartOnCreation: true
-
 Outputs:
-  PreProcessingJobName:
-    Description: 'Name of the Glue Pre-Processing Job'
-    Value: !Ref DataOpsGluePreProcessingJob
-
   WorkflowName:
     Description: 'Name of the Glue Workflow'
     Value: !Ref DataOpsGlueWorkflow
+
+  PreProcessingJobName:
+    Description: 'Name of the Glue Pre-Processing Job'
+    Value: !Ref DataOpsGluePreProcessingJob
