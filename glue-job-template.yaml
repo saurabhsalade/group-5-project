@@ -58,6 +58,7 @@ Resources:
       Name: "dataops-glue-trigger-ingestion-to-preprocessing"
       Description: "Trigger to start preprocessing job after ingestion job completes"
       Type: CONDITIONAL
+      StartOnCreation: true
       Actions:
         - JobName: !Ref DataOpsGluePreProcessingJob
       Predicate:
@@ -65,6 +66,17 @@ Resources:
           - JobName: !Ref DataOpsGlueIngestionJob
             LogicalOperator: EQUALS
             State: SUCCEEDED
+      WorkflowName: !Ref DataOpsGlueWorkflow
+
+  # Start Workflow Manually using ON_DEMAND Trigger
+  DataOpsGlueWorkflowStartTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Name: "dataops-glue-start-trigger"
+      Type: ON_DEMAND
+      Actions:
+        - WorkflowRunProperties:
+            WorkflowName: !Ref DataOpsGlueWorkflow
       StartOnCreation: true
 
 Outputs:
