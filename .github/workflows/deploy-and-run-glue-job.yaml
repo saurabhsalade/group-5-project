@@ -42,10 +42,6 @@ jobs:
       run: |
         aws glue start-job-run --job-name dataops-glue-ingestion-job
 
-    - name: Wait for Ingestion Glue Job to complete
-      run: |
-        aws glue wait job-run-completed --job-name dataops-glue-ingestion-job --run-id $(aws glue list-job-runs --job-name dataops-glue-ingestion-job --query 'JobRuns[0].Id' --output text)
-
 
     - name: Start Pre-Processing Glue Job
       run: |
