@@ -24,8 +24,8 @@ jobs:
 
     - name: Upload Python scripts to S3
       run: |
-        aws s3 cp ingestion.py s3://datasource-dataops-group5/script-ingestion/
-        aws s3 cp pre_processing.py s3://datalake-dataops-group5/script-preprocessing/
+        aws s3 cp ingestion.py s3://datasource-dataops-group5-bucket/script-ingestion/
+        aws s3 cp pre_processing.py s3://datalake-dataops-group5-bucket/script-preprocessing/
 
     - name: Validate CloudFormation template
       run: |
