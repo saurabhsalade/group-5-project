@@ -44,10 +44,28 @@ jobs:
         echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_OUTPUT
 
     - name: Start Glue Workflow
+      id: start-workflow
       run: |
         WORKFLOW_RUN_ID=$(aws glue start-workflow-run --name ${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }} --query 'RunId' --output text)
+        echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_OUTPUT
         echo "Workflow run ID: $WORKFLOW_RUN_ID"
 
     - name: Wait for Workflow Completion
       run: |
-        aws glue get-workflow-run --name ${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }} --run-id $WORKFLOW_RUN_ID --include-graph
+        WORKFLOW_NAME="${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }}"
+        WORKFLOW_RUN_ID="${{ steps.start-workflow.outputs.WORKFLOW_RUN_ID }}"
+        echo "Waiting for workflow $WORKFLOW_NAME with run ID $WORKFLOW_RUN_ID to complete..."
+        while true; do
+          STATUS=$(aws glue get-workflow-run --name "$WORKFLOW_NAME" --run-id "$WORKFLOW_RUN_ID" --query 'Run.Status' --output text)
+          echo "Current status: $STATUS"
+          if [ "$STATUS" = "COMPLETED" ]; then
+            echo "Workflow completed successfully"
+            break
+          elif [ "$STATUS" = "RUNNING" ] || [ "$STATUS" = "STARTING" ]; then
+            echo "Workflow is still running. Waiting..."
+            sleep 60
+          else
+            echo "Workflow failed or stopped unexpectedly. Status: $STATUS"
+            exit 1
+          fi
+        done
