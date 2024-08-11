@@ -1,75 +1,43 @@
-AWSTemplateFormatVersion: '2010-09-09'
-Description: Orchestrate Data Preprocessing Job in AWS Glue
+name: Deploy CloudFormation and Run AWS Glue Workflow
 
-Resources:
-  DataOpsGlueIngestionJob:
-    Type: AWS::Glue::Job
-    Properties:
-      Name: "dataops-glue-ingestion-job"
-      Role: "arn:aws:iam::988964411479:role/LabRole"
-      Command:
-        Name: "glueetl"
-        ScriptLocation: "s3://datasource-dataops-group5-bucket/script-ingestion/ingestion.py"
-        PythonVersion: "3"
-      GlueVersion: "4.0"
-      NumberOfWorkers: 10
-      WorkerType: "G.1X"
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
-  DataOpsGluePreProcessingJob:
-    Type: AWS::Glue::Job
-    Properties:
-      Name: "dataops-glue-preprocessing-job"
-      Role: "arn:aws:iam::988964411479:role/LabRole"
-      Command:
-        Name: "glueetl"
-        ScriptLocation: "s3://datalake-dataops-group5-bucket/script-preprocessing/pre_processing.py"
-        PythonVersion: "3"
-      GlueVersion: "4.0"
-      NumberOfWorkers: 10
-      WorkerType: "G.1X"
-      DefaultArguments:
-        '--TempDir': 's3://datalake-dataops-group5-bucket-temp/temp/'
-        '--job-language': 'python'
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-  DataOpsGlueWorkflow:
-    Type: AWS::Glue::Workflow
-    Properties:
-      Name: "dataops-glue-workflow"
-      Description: "Workflow to orchestrate ingestion and preprocessing jobs"
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-  DataOpsIngestionToPreProcessingTrigger:
-    Type: AWS::Glue::Trigger
-    DependsOn:
-      - DataOpsGlueIngestionJob
-    Properties:
-      Name: "dataops-glue-trigger-ingestion-to-preprocessing"
-      Description: "Trigger to start preprocessing job after ingestion job completes"
-      Type: CONDITIONAL
-      StartOnCreation: true
-      Actions:
-        - JobName: !Ref DataOpsGluePreProcessingJob
-      Predicate:
-        Conditions:
-          - JobName: !Ref DataOpsGlueIngestionJob
-            LogicalOperator: EQUALS
-            State: SUCCEEDED
-      WorkflowName: !Ref DataOpsGlueWorkflow
+    - name: Set up AWS CLI
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-  DataOpsGlueWorkflowStartTrigger:
-    Type: AWS::Glue::Trigger
-    Properties:
-      Name: "dataops-glue-start-trigger"
-      Type: ON_DEMAND
-      Actions:
-        - WorkflowRunProperties:
-            WorkflowName: !Ref DataOpsGlueWorkflow
-      StartOnCreation: true
+    - name: Upload Python scripts to S3
+      run: |
+        aws s3 cp ingestion.py s3://datasource-dataops-group5-bucket/script-ingestion/
+        aws s3 cp pre_processing.py s3://datalake-dataops-group5-bucket/script-preprocessing/
 
-Outputs:
-  PreProcessingJobName:
-    Description: 'Name of the Glue Pre-Processing Job'
-    Value: !Ref DataOpsGluePreProcessingJob
+    - name: Validate CloudFormation template
+      run: |
+        aws cloudformation validate-template --template-body file://glue-job-template.yaml
 
-  WorkflowName:
-    Description: 'Name of the Glue Workflow'
-    Value: !Ref DataOpsGlueWorkflow
+    - name: Deploy CloudFormation stack
+      run: |
+        aws cloudformation deploy \
+          --template-file glue-job-template.yaml \
+          --stack-name dataops-glue-job-stack \
+          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+
+    - name: Start Glue Workflow
+      run: |
+        aws glue start-workflow-run --name dataops-glue-workflow
