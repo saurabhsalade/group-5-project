@@ -31,6 +31,12 @@ Resources:
         '--TempDir': 's3://datalake-dataops-group5-bucket-temp/temp/'
         '--job-language': 'python'
 
+  DataOpsGlueWorkflow:
+    Type: AWS::Glue::Workflow
+    Properties:
+      Name: "dataops-glue-workflow"
+      Description: "Workflow to orchestrate ingestion and preprocessing jobs"
+
   DataOpsIngestionToPreProcessingTrigger:
     Type: AWS::Glue::Trigger
     DependsOn:
@@ -47,8 +53,13 @@ Resources:
           - JobName: !Ref DataOpsGlueIngestionJob
             LogicalOperator: EQUALS
             State: SUCCEEDED
+      WorkflowName: !Ref DataOpsGlueWorkflow
 
 Outputs:
   PreProcessingJobName:
     Description: 'Name of the Glue Pre-Processing Job'
     Value: !Ref DataOpsGluePreProcessingJob
+
+  WorkflowName:
+    Description: 'Name of the Glue Workflow'
+    Value: !Ref DataOpsGlueWorkflow
