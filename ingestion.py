@@ -14,8 +14,8 @@ job = Job(glueContext)
 job.init(args['JOB_NAME'], args)
 
 # Define the source and target S3 paths
-source_s3_path = "s3://datasource-dataops-group5/vehicles-dataset/"
-target_s3_path = "s3://datalake-dataops-group5/vehicles/"
+source_s3_path = "s3://datasource-dataops-group5-bucket/vehicles/"
+target_s3_path = "s3://datalake-dataops-group5-bucket/vehicles/"
 
 # Read the data from the source S3 bucket
 datasource0 = glueContext.create_dynamic_frame.from_options(
