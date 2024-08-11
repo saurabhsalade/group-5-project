@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Resources:
-  # MyS3Bucket1:
+  MyS3Bucket1:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: datalake-dataops-group5 # Replace with a globally unique name
