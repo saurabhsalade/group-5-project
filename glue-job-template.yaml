@@ -48,8 +48,6 @@ Resources:
     Properties:
       Name: "dataops-glue-trigger-start-ingestion"
       Type: ON_DEMAND
-      StartOnCreation: true
-      WorkflowName: !Ref DataOpsGlueWorkflow
       Actions:
         - JobName: !Ref DataOpsGlueIngestionJob
 
@@ -60,8 +58,6 @@ Resources:
       Name: "dataops-glue-trigger-ingestion-to-preprocessing"
       Description: "Trigger to start preprocessing job after ingestion job completes"
       Type: CONDITIONAL
-      StartOnCreation: true
-      WorkflowName: !Ref DataOpsGlueWorkflow
       Actions:
         - JobName: !Ref DataOpsGluePreProcessingJob
       Predicate:
@@ -69,6 +65,7 @@ Resources:
           - JobName: !Ref DataOpsGlueIngestionJob
             LogicalOperator: EQUALS
             State: SUCCEEDED
+      StartOnCreation: true
 
 Outputs:
   WorkflowName:
