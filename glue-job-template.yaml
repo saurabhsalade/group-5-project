@@ -55,6 +55,16 @@ Resources:
             State: SUCCEEDED
       WorkflowName: !Ref DataOpsGlueWorkflow
 
+  DataOpsGlueWorkflowStartTrigger:
+    Type: AWS::Glue::Trigger
+    Properties:
+      Name: "dataops-glue-start-trigger"
+      Type: ON_DEMAND
+      Actions:
+        - WorkflowRunProperties:
+            WorkflowName: !Ref DataOpsGlueWorkflow
+      StartOnCreation: true
+
 Outputs:
   PreProcessingJobName:
     Description: 'Name of the Glue Pre-Processing Job'
