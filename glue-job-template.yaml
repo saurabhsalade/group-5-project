@@ -35,7 +35,6 @@ Resources:
     Type: AWS::Glue::Trigger
     DependsOn:
       - DataOpsGlueIngestionJob
-      - DataOpsGluePreProcessingJob
     Properties:
       Name: "dataops-glue-trigger-ingestion-to-preprocessing"
       Description: "Trigger to start preprocessing job after ingestion job completes"
@@ -48,7 +47,6 @@ Resources:
           - JobName: !Ref DataOpsGlueIngestionJob
             LogicalOperator: EQUALS
             State: SUCCEEDED
-      
 
 Outputs:
   PreProcessingJobName:
