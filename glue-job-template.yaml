@@ -2,18 +2,18 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Orchestrate Data Preprocessing Job in AWS Glue
 
 Resources:
-  # DataOpsGlueIngestionJob:
-  #   Type: AWS::Glue::Job
-  #   Properties:
-  #     Name: "dataops-glue-ingestion-job"
-  #     Role: "arn:aws:iam::233359079168:role/LabRole"
-  #     Command:
-  #       Name: "glueetl"
-  #       ScriptLocation: "s3://datasource-dataops-group5/script-ingestion/ingestion.py"
-  #       PythonVersion: "3"
-  #     GlueVersion: "4.0"
-  #     NumberOfWorkers: 10
-  #     WorkerType: "G.1X"
+  DataOpsGlueIngestionJob:
+    Type: AWS::Glue::Job
+    Properties:
+      Name: "dataops-glue-ingestion-job"
+      Role: "arn:aws:iam::233359079168:role/LabRole"
+      Command:
+        Name: "glueetl"
+        ScriptLocation: "s3://datasource-dataops-group5/script-ingestion/ingestion.py"
+        PythonVersion: "3"
+      GlueVersion: "4.0"
+      NumberOfWorkers: 10
+      WorkerType: "G.1X"
 
   DataOpsGluePreProcessingJob:
     Type: AWS::Glue::Job
@@ -36,24 +36,24 @@ Outputs:
     Description: 'Name of the Glue Pre-Processing Job'
     Value: !Ref DataOpsGluePreProcessingJob
 
-  # Uncomment and modify the following if you want to set up a trigger
-  # DataOpsIngestionToPreProcessingTrigger:
-  #   Type: AWS::Glue::Trigger
-  #   DependsOn:
-  #     - DataOpsGlueIngestionJob
-  #     - DataOpsGluePreProcessingJob
-  #   Properties:
-  #     Name: "dataops-glue-trigger-ingestion-to-preprocessing"
-  #     Description: "Trigger to start preprocessing job after ingestion job completes"
-  #     Type: CONDITIONAL
-  #     StartOnCreation: true
-  #     Actions:
-  #       - JobName: !Ref DataOpsGluePreProcessingJob
-  #     Predicate:
-  #       Conditions:
-  #         - JobName: !Ref DataOpsGlueIngestionJob
-  #           LogicalOperator: EQUALS
-  #           State: SUCCEEDED
-  #     Tags:
-  #       - Key: "Environment"
-  #         Value: "Production"
+  Uncomment and modify the following if you want to set up a trigger
+  DataOpsIngestionToPreProcessingTrigger:
+    Type: AWS::Glue::Trigger
+    DependsOn:
+      - DataOpsGlueIngestionJob
+      - DataOpsGluePreProcessingJob
+    Properties:
+      Name: "dataops-glue-trigger-ingestion-to-preprocessing"
+      Description: "Trigger to start preprocessing job after ingestion job completes"
+      Type: CONDITIONAL
+      StartOnCreation: true
+      Actions:
+        - JobName: !Ref DataOpsGluePreProcessingJob
+      Predicate:
+        Conditions:
+          - JobName: !Ref DataOpsGlueIngestionJob
+            LogicalOperator: EQUALS
+            State: SUCCEEDED
+      Tags:
+        - Key: "Environment"
+          Value: "Production"
