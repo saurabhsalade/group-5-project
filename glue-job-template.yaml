@@ -23,8 +23,6 @@ Resources:
       NumberOfWorkers: 10
       WorkerType: "G.1X"
       MaxRetries: 1
-      # Add a schedule if needed
-      # Schedule: cron(0 12 * * ? *) 
 
   # Define the Preprocessing Job
   DataOpsGluePreProcessingJob:
@@ -44,7 +42,7 @@ Resources:
         '--job-language': 'python'
       MaxRetries: 1
 
-  # Trigger for starting the Ingestion Job
+  # Trigger to start the Ingestion Job
   DataOpsStartIngestionTrigger:
     Type: AWS::Glue::Trigger
     Properties:
@@ -71,7 +69,7 @@ Resources:
             State: SUCCEEDED
       WorkflowName: !Ref DataOpsGlueWorkflow
 
-  # Start Workflow Manually using ON_DEMAND Trigger
+  # Manually trigger the Glue Workflow
   DataOpsGlueWorkflowStartTrigger:
     Type: AWS::Glue::Trigger
     Properties:
