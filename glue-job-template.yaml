@@ -6,7 +6,7 @@ Resources:
     Type: AWS::Glue::Job
     Properties:
       Name: "dataops-glue-ingestion-job"
-      Role: "arn:aws:iam::233359079168:role/LabRole"
+      Role: "arn:aws:iam::988964411479:role/LabRole"
       Command:
         Name: "glueetl"
         ScriptLocation: "s3://datasource-dataops-group5-bucket/script-ingestion/ingestion.py"
@@ -19,7 +19,7 @@ Resources:
     Type: AWS::Glue::Job
     Properties:
       Name: "dataops-glue-preprocessing-job"
-      Role: "arn:aws:iam::233359079168:role/LabRole"
+      Role: "arn:aws:iam::988964411479:role/LabRole"
       Command:
         Name: "glueetl"
         ScriptLocation: "s3://datalake-dataops-group5-bucket/script-preprocessing/pre_processing.py"
