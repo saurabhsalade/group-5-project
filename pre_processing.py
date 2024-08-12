@@ -34,6 +34,9 @@ DropFields_node1723463391225 = DropFields.apply(
 # Convert DynamicFrame to DataFrame
 dataFrame = DropFields_node1723463391225.toDF()
 
+# Print number of partitions before coalescing
+print("Number of partitions before coalescing:", dataFrame.rdd.getNumPartitions())
+
 # List of columns to replace blank values
 columns_to_fill = ["year", "manufacturer", "model", "condition", "cylinders", "fuel", "odometer", 
                     "title_status", "transmission", "VIN", "drive", "size", "type", "paint_color",
@@ -48,6 +51,9 @@ for column in columns_to_fill:
 
 # Coalesce to a single partition (file)
 dataFrame = dataFrame.coalesce(1)
+
+# Print number of partitions after coalescing
+print("Number of partitions after coalescing:", dataFrame.rdd.getNumPartitions())
 
 # Convert DataFrame back to DynamicFrame
 finalDynamicFrame = DynamicFrame.fromDF(dataFrame, glueContext, "finalDynamicFrame")
