@@ -44,28 +44,44 @@ jobs:
         fi
 
     - name: Deploy CloudFormation stack
+      id: deploy-stack
       run: |
+        set +e
         aws cloudformation deploy \
           --template-file cft-template.yaml \
           --stack-name dataops-stack \
           --parameter-overrides DataLakeBucket=${{ env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ env.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
           --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
           --no-fail-on-empty-changeset
+        DEPLOY_STATUS=$?
+        set -e
+        echo "DEPLOY_STATUS=$DEPLOY_STATUS" >> $GITHUB_OUTPUT
+
+    - name: Force delete stack if deployment failed
+      if: failure() || steps.deploy-stack.outputs.DEPLOY_STATUS != '0'
+      run: |
+        echo "Deployment failed or rollback occurred. Forcing stack deletion..."
+        aws cloudformation delete-stack --stack-name dataops-stack
+        echo "Waiting for stack to be deleted..."
+        aws cloudformation wait stack-delete-complete --stack-name dataops-stack
 
     - name: Get Workflow Name
       id: get-workflow-name
+      if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
       run: |
         WORKFLOW_NAME=$(aws cloudformation describe-stacks --stack-name dataops-stack --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" --output text)
         echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_OUTPUT
 
     - name: Start Glue Workflow
       id: start-workflow
+      if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
       run: |
         WORKFLOW_RUN_ID=$(aws glue start-workflow-run --name ${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }} --query 'RunId' --output text)
         echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_OUTPUT
         echo "Workflow run ID: $WORKFLOW_RUN_ID"
 
     - name: Wait for Workflow Completion
+      if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
       run: |
         WORKFLOW_NAME="${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }}"
         WORKFLOW_RUN_ID="${{ steps.start-workflow.outputs.WORKFLOW_RUN_ID }}"
