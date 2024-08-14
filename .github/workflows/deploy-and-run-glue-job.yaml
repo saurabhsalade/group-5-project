@@ -29,6 +29,17 @@ jobs:
       run: |
         aws cloudformation validate-template --template-body file://glue-job-template.yaml
 
+    - name: Delete existing CloudFormation stack if it exists
+      run: |
+        if aws cloudformation describe-stacks --stack-name dataops-glue-job-stack &>/dev/null; then
+          echo "Stack exists, deleting..."
+          aws cloudformation delete-stack --stack-name dataops-glue-job-stack
+          echo "Waiting for stack to be deleted..."
+          aws cloudformation wait stack-delete-complete --stack-name dataops-glue-job-stack
+        else
+          echo "Stack does not exist, proceeding with deployment..."
+        fi
+
     - name: Deploy CloudFormation stack
       run: |
         aws cloudformation deploy \
