@@ -1,9 +1,19 @@
 AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  DataLakeBucket:
+    Type: String
+    Description: "The S3 bucket for the data lake"
+  
+  DataWarehouseBucket:
+    Type: String
+    Description: "The S3 bucket for the data warehouse"
+
 Resources:
   MyS3Bucket1:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: datalake-dbda-group5 # Replace with a globally unique name
+      BucketName: !Ref DataLakeBucket  # Using the DataLakeBucket parameter
       VersioningConfiguration:
         Status: Suspended
       Tags:
@@ -13,7 +23,7 @@ Resources:
   MyS3Bucket2:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: datawarehouse-dbda-group5 # Replace with a globally unique name
+      BucketName: !Ref DataWarehouseBucket  # Using the DataWarehouseBucket parameter
       VersioningConfiguration:
         Status: Suspended
       Tags:
