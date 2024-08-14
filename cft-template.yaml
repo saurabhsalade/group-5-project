@@ -113,16 +113,36 @@ Resources:
 Outputs:
   DataLakeBucketName:
     Description: 'Name of the Data Lake S3 Bucket'
+    Condition: CreateDataLakeBucket
     Value: !Ref MyS3Bucket1
+  
   DataWarehouseBucketName:
     Description: 'Name of the Data Warehouse S3 Bucket'
+    Condition: CreateDataWarehouseBucket
     Value: !Ref MyS3Bucket2
+  
+  DataLakeBucketInfo:
+    Description: 'Information about the Data Lake S3 Bucket'
+    Value: !If 
+      - CreateDataLakeBucket
+      - !Sub "Data Lake Bucket '${MyS3Bucket1}' was created"
+      - "No new Data Lake Bucket was created"
+
+  DataWarehouseBucketInfo:
+    Description: 'Information about the Data Warehouse S3 Bucket'
+    Value: !If 
+      - CreateDataWarehouseBucket
+      - !Sub "Data Warehouse Bucket '${MyS3Bucket2}' was created"
+      - "No new Data Warehouse Bucket was created"
+
   PreProcessingJobName:
     Description: 'Name of the Glue Pre-Processing Job'
     Value: !Ref DataOpsGluePreProcessingJob
+
   WorkflowName:
     Description: 'Name of the Glue Workflow'
     Value: !Ref DataOpsGlueWorkflow
+
   StartTriggerName:
     Description: 'Name of the Workflow Start Trigger'
     Value: !Ref DataOpsWorkflowStartTrigger
