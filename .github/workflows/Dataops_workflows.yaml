@@ -39,11 +39,11 @@ jobs:
 
     - name: Delete existing CloudFormation stack if it exists
       run: |
-        if aws cloudformation describe-stacks --stack-name dataops-stack-bucket &>/dev/null; then
+        if aws cloudformation describe-stacks --stack-name dataops-stack &>/dev/null; then
           echo "Stack exists, deleting..."
-          aws cloudformation delete-stack --stack-name dataops-stack-bucket
+          aws cloudformation delete-stack --stack-name dataops-stack
           echo "Waiting for stack to be deleted..."
-          aws cloudformation wait stack-delete-complete --stack-name dataops-stack-bucket
+          aws cloudformation wait stack-delete-complete --stack-name dataops-stack
         else
           echo "Stack does not exist, proceeding with deployment..."
         fi
@@ -54,7 +54,7 @@ jobs:
         set +e
         aws cloudformation deploy \
           --template-file cft-template.yaml \
-          --stack-name dataops-stack-bucket \
+          --stack-name dataops-stack \
           --parameter-overrides DataLakeBucket=${{ env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ env.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
           --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
           --no-fail-on-empty-changeset
@@ -66,15 +66,15 @@ jobs:
       if: failure() || steps.deploy-stack.outputs.DEPLOY_STATUS != '0'
       run: |
         echo "Deployment failed or rollback occurred. Forcing stack deletion..."
-        aws cloudformation delete-stack --stack-name dataops-stack-bucket
+        aws cloudformation delete-stack --stack-name dataops-stack
         echo "Waiting for stack to be deleted..."
-        aws cloudformation wait stack-delete-complete --stack-name dataops-stack-bucket
+        aws cloudformation wait stack-delete-complete --stack-name dataops-stack
 
     - name: Get Workflow Name
       id: get-workflow-name
       if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
       run: |
-        WORKFLOW_NAME=$(aws cloudformation describe-stacks --stack-name dataops-stack-glue --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" --output text)
+        WORKFLOW_NAME=$(aws cloudformation describe-stacks --stack-name dataops-stack --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" --output text)
         echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_OUTPUT
 
     - name: Start Glue Workflow
