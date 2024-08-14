@@ -40,7 +40,7 @@ jobs:
 
     - name: Delete existing CloudFormation stack if it exists
       run: |
-        if aws cloudformation describe-stacks --stack-name dataops-stack &>/dev/null; then
+        if aws cloudformation describe-stacks --stack-name dataops-stack-s3 &>/dev/null; then
           echo "Stack exists, deleting..."
           aws cloudformation delete-stack --stack-name dataops-stack-s3
           echo "Waiting for stack to be deleted..."
