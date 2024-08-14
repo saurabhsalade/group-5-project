@@ -1,28 +1,51 @@
----
-name: create a s3 instance
+name: Create S3 Instance
+
 on:
   push:
     branches: [ main ]
 
 jobs:
   Deployment:
-    name: datalake-datawarehouse-datawarehouse
+    name: Create S3 Bucket using CloudFormation
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      DATA_LAKE_BUCKET: ${{ secrets.DATA_LAKE_BUCKET }}
+      DATA_WAREHOUSE_BUCKET: ${{ secrets.DATA_WAREHOUSE_BUCKET }}
 
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.7'
-      - name: Install dependencies
+
+      - name: Install AWS CLI
         run: |
           python -m pip install --upgrade pip
           pip install awscli
-      - run: aws cloudformation create-stack --stack-name datalake-datawarehouse-datawarehouse --template-body file://s3bucket1.yaml
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-1
-          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+
+      - name: Delete Existing CloudFormation Stack (if exists)
+        run: |
+          STACK_NAME=datalake-datawarehouse-datawarehouse
+          if aws cloudformation describe-stacks --stack-name $STACK_NAME; then
+            echo "Stack $STACK_NAME exists. Deleting it..."
+            aws cloudformation delete-stack --stack-name $STACK_NAME
+            aws cloudformation wait stack-delete-complete --stack-name $STACK_NAME
+          else
+            echo "Stack $STACK_NAME does not exist. Proceeding to create a new stack."
+          fi
+
+      - name: Create S3 Bucket Stack
+        run: |
+          aws cloudformation create-stack \
+            --stack-name datalake-datawarehouse-datawarehouse \
+            --template-body file://s3bucket1.yaml \
+            --parameters \
+              ParameterKey=DataLakeBucket,ParameterValue=$DATA_LAKE_BUCKET \
+              ParameterKey=DataWarehouseBucket,ParameterValue=$DATA_WAREHOUSE_BUCKET
