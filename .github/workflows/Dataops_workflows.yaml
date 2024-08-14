@@ -28,6 +28,11 @@ jobs:
         echo "SCRIPT_BUCKET=${{ secrets.SCRIPT_BUCKET }}" >> $GITHUB_ENV
         echo "GLUE_ROLE_ARN=${{ secrets.GLUE_ROLE_ARN }}" >> $GITHUB_ENV
 
+    - name: Upload Python scripts to S3
+      run: |
+        aws s3 cp ingestion.py s3://${{ env.SCRIPT_BUCKET }}/script-ingestion/
+        aws s3 cp pre_processing.py s3://${{ env.SCRIPT_BUCKET }}/script-pre-processing/
+
     - name: Validate CloudFormation template
       run: |
         aws cloudformation validate-template --template-body file://cft-template.yaml
