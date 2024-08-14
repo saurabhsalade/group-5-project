@@ -20,10 +20,17 @@ jobs:
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: ${{ secrets.AWS_REGION }}
 
+    - name: Set environment variables for S3 buckets and IAM role ARN
+      run: |
+        echo "DATASOURCE_BUCKET=datasource-dbda-group5" >> $GITHUB_ENV
+        echo "DATAWAREHOUSE_BUCKET=datawarehouse-dbda-group5" >> $GITHUB_ENV
+        echo "DATALAKE_BUCKET=datalake-dbda-group5" >> $GITHUB_ENV
+        echo "GLUE_ROLE_ARN=${{ secrets.GLUE_ROLE_ARN }}" >> $GITHUB_ENV
+
     - name: Upload Python scripts to S3
       run: |
-        aws s3 cp ingestion.py s3://dbda-scripts-bucket/script-ingestion/
-        aws s3 cp pre_processing.py s3://dbda-scripts-bucket/script-pre-processing/
+        aws s3 cp ingestion.py s3://${{ env.DATASOURCE_BUCKET }}/script-ingestion/
+        aws s3 cp pre_processing.py s3://${{ env.DATALAKE_BUCKET }}/script-pre-processing/
 
     - name: Validate CloudFormation template
       run: |
@@ -45,6 +52,7 @@ jobs:
         aws cloudformation deploy \
           --template-file glue-job-template.yaml \
           --stack-name dataops-glue-job-stack \
+          --parameter-overrides GlueRoleArn=${{ env.GLUE_ROLE_ARN }} \
           --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
           --no-fail-on-empty-changeset
 
