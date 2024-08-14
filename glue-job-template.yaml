@@ -9,7 +9,7 @@ Resources:
       Role: "arn:aws:iam::857296095557:role/LabRole"
       Command:
         Name: "glueetl"
-        ScriptLocation: "s3://datasource-dbda-group5/script-ingestion/ingestion.py"
+        ScriptLocation: "s3://dbda-scripts-bucket/script-ingestion/ingestion.py"
         PythonVersion: "3"
       GlueVersion: "4.0"
       NumberOfWorkers: 10
@@ -22,7 +22,7 @@ Resources:
       Role: "arn:aws:iam::857296095557:role/LabRole"
       Command:
         Name: "glueetl"
-        ScriptLocation: "s3://datalake-dbda-group5/script-transform/pre_processing.py"
+        ScriptLocation: "s3://dbda-scripts-bucket/script-pre-processing/pre_processing.py"
         PythonVersion: "3"
       GlueVersion: "4.0"
       NumberOfWorkers: 10
