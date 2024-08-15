@@ -62,7 +62,7 @@ Resources:
       Role: !Ref GlueRoleArn
       Command:
         Name: "glueetl"
-        ScriptLocation: !Sub "s3://${ScriptBucket}/script-pre-processing/pre_processing.py"
+        ScriptLocation: !Sub "s3://${ScriptBucket}/script-preprocessing/pre_processing.py"
         PythonVersion: "3"
       GlueVersion: "4.0"
       NumberOfWorkers: 10
@@ -70,6 +70,10 @@ Resources:
       DefaultArguments:
         '--TempDir': !Sub "s3://${DataLakeBucket}/temp/"
         '--job-language': 'python'
+        '--enable-continuous-cloudwatch-log': 'true'
+        '--enable-metrics': 'true'
+        '--enable-spark-ui': 'true'
+        '--spark-event-logs-path': !Sub "s3://${DataLakeBucket}/spark-history/"
 
   DataOpsGlueWorkflow:
     Type: AWS::Glue::Workflow
