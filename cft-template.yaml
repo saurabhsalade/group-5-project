@@ -97,8 +97,8 @@ Resources:
         - JobName: !Ref DataOpsGluePreProcessingJob
       Predicate:
         Conditions:
-          - JobName: !Ref DataOpsGlueIngestionJob
-            LogicalOperator: EQUALS
+          - LogicalOperator: EQUALS
+            JobName: !Ref DataOpsGlueIngestionJob
             State: SUCCEEDED
       WorkflowName: !Ref DataOpsGlueWorkflow
 
