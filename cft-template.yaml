@@ -68,7 +68,7 @@ Resources:
       NumberOfWorkers: 10
       WorkerType: "G.1X"
       DefaultArguments:
-        '--TempDir': !Sub "s3://${DataLakeBucket}-temp/temp/"
+        '--TempDir': !Sub "s3://${DataLakeBucket}/temp/"
         '--job-language': 'python'
 
   DataOpsGlueWorkflow:
