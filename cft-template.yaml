@@ -62,7 +62,7 @@ Resources:
       Role: !Ref GlueRoleArn
       Command:
         Name: "glueetl"
-        ScriptLocation: !Sub "s3://${ScriptBucket}/script-preprocessing/pre_processing.py"
+        ScriptLocation: !Sub "s3://${ScriptBucket}/script-pre-processing/pre_processing.py"
         PythonVersion: "3"
       GlueVersion: "4.0"
       NumberOfWorkers: 10
