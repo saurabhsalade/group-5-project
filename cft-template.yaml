@@ -70,10 +70,6 @@ Resources:
       DefaultArguments:
         '--TempDir': !Sub "s3://${DataLakeBucket}/temp/"
         '--job-language': 'python'
-        '--enable-continuous-cloudwatch-log': 'true'
-        '--enable-metrics': 'true'
-        '--enable-spark-ui': 'true'
-        '--spark-event-logs-path': !Sub "s3://${DataLakeBucket}/spark-history/"
 
   DataOpsGlueWorkflow:
     Type: AWS::Glue::Workflow
@@ -93,16 +89,20 @@ Resources:
 
   DataOpsIngestionToPreProcessingTrigger:
     Type: AWS::Glue::Trigger
+    DependsOn:
+      - DataOpsGlueIngestionJob
+      - DataOpsGluePreProcessingJob
     Properties:
       Name: "dataops-glue-trigger-ingestion-to-preprocessing"
       Description: "Trigger to start preprocessing job after ingestion job completes"
       Type: CONDITIONAL
+      StartOnCreation: true
       Actions:
         - JobName: !Ref DataOpsGluePreProcessingJob
       Predicate:
-        Conditions:
-          - LogicalOperator: EQUALS
-            JobName: !Ref DataOpsGlueIngestionJob
+        Conditions: 
+          - JobName: !Ref DataOpsGlueIngestionJob
+            LogicalOperator: EQUALS
             State: SUCCEEDED
       WorkflowName: !Ref DataOpsGlueWorkflow
 
