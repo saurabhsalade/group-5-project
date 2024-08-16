@@ -1,71 +1,67 @@
 import sys
-from awsglue.transforms import *
-from awsglue.utils import getResolvedOptions
-from pyspark.context import SparkContext
-from awsglue.context import GlueContext
-from awsglue.job import Job
-from pyspark.sql import functions as F
-from pyspark.sql.functions import lit
-from awsglue.dynamicframe import DynamicFrame
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, lit, when
 
-args = getResolvedOptions(sys.argv, ['JOB_NAME'])
-sc = SparkContext()
-glueContext = GlueContext(sc)
-spark = glueContext.spark_session
-job = Job(glueContext)
-job.init(args['JOB_NAME'], args)
+try:
+    # AWS Glue-specific imports
+    from awsglue.utils import getResolvedOptions
+    from awsglue.context import GlueContext
+    from awsglue.job import Job
 
-# Script generated for node Amazon S3
-AmazonS3_node1723463202371 = glueContext.create_dynamic_frame.from_options(
-    format_options={},
-    connection_type="s3",
-    format="parquet",
-    connection_options={"paths": ["s3://datalake-dbda-group5/vehicles-ingestion/"], "recurse": True},
-    transformation_ctx="AmazonS3_node1723463202371"
-)
+    # Initialize Spark Session and Glue Context
+    # In AWS Glue, a SparkSession is automatically available as 'spark'
+    if 'glueContext' not in locals():
+        glueContext = GlueContext(SparkSession.builder.getOrCreate())
+        spark = glueContext.spark_session
 
-# Script generated for node Drop Fields
-DropFields_node1723463391225 = DropFields.apply(
-    frame=AmazonS3_node1723463202371,
-    paths=["region_url", "image_url", "description"],
-    transformation_ctx="DropFields_node1723463391225"
-)
+    # If running in AWS Glue, initialize the job context
+    if 'JOB_NAME' in sys.argv:
+        args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+        job = Job(glueContext)
+        job.init(args['JOB_NAME'], args)
 
-# Convert DynamicFrame to DataFrame
-dataFrame = DropFields_node1723463391225.toDF()
+    # Load data from S3 (Parquet format)
+    s3_input_path = "s3://datalake-dbda-group5/vehicles-ingestion/"
+    dataFrame = spark.read.parquet(s3_input_path)
 
-# Print number of partitions before coalescing
-print("Number of partitions before coalescing:", dataFrame.rdd.getNumPartitions())
+    # Drop unwanted columns
+    columns_to_drop = ["region_url", "image_url", "description"]
+    dataFrame = dataFrame.drop(*columns_to_drop)
 
-# List of columns to replace blank values
-columns_to_fill = ["year", "manufacturer", "model", "condition", "cylinders", "fuel", "odometer", 
-                    "title_status", "transmission", "VIN", "drive", "size", "type", "paint_color",
-                    "county", "lat", "long", "posting_date"]
+    # Print number of partitions before coalescing
+    print("Number of partitions before coalescing:", dataFrame.rdd.getNumPartitions())
 
-# Replace blank values with 'NA'
-for column in columns_to_fill:
-    dataFrame = dataFrame.withColumn(column, 
-        F.when(F.col(column).isNull() | (F.col(column) == ""), lit("NA"))
-         .otherwise(F.col(column))
-    )
+    # List of columns to replace blank values
+    columns_to_fill = ["year", "manufacturer", "model", "condition", "cylinders", "fuel", "odometer", 
+                       "title_status", "transmission", "VIN", "drive", "size", "type", "paint_color",
+                       "county", "lat", "long", "posting_date"]
 
-# Coalesce to a single partition (file)
-dataFrame = dataFrame.coalesce(1)
+    # Replace blank values with 'NA'
+    for column in columns_to_fill:
+        dataFrame = dataFrame.withColumn(
+            column, 
+            when(col(column).isNull() | (col(column) == ""), lit("NA"))
+            .otherwise(col(column))
+        )
 
-# Print number of partitions after coalescing
-print("Number of partitions after coalescing:", dataFrame.rdd.getNumPartitions())
+    # Coalesce to a single partition (file)
+    dataFrame = dataFrame.coalesce(1)
 
-# Convert DataFrame back to DynamicFrame
-finalDynamicFrame = DynamicFrame.fromDF(dataFrame, glueContext, "finalDynamicFrame")
+    # Print number of partitions after coalescing
+    print("Number of partitions after coalescing:", dataFrame.rdd.getNumPartitions())
 
-# Script generated for node Amazon S3
-AmazonS3_node1723463967335 = glueContext.write_dynamic_frame.from_options(
-    frame=finalDynamicFrame,
-    connection_type="s3",
-    format="glueparquet",
-    connection_options={"path": "s3://datawarehouse-dbda-group5/vehicles-transform/", "partitionKeys": []},
-    format_options={"compression": "snappy"},
-    transformation_ctx="AmazonS3_node1723463967335"
-)
+    # Write the transformed data back to S3 in Parquet format with Snappy compression
+    s3_output_path = "s3://datawarehouse-dbda-group5/vehicles-transform/"
+    dataFrame.write.mode("overwrite").parquet(s3_output_path, compression="snappy")
 
-job.commit()
+    # If running in AWS Glue, commit the job
+    if 'JOB_NAME' in sys.argv:
+        job.commit()
+
+except Exception as e:
+    print(f"Error: {e}")
+    if 'JOB_NAME' in sys.argv:
+        job.commit()
+finally:
+    # Stop the Spark Session
+    spark.stop()
