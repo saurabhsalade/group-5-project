@@ -56,7 +56,11 @@ jobs:
           aws cloudformation deploy \
             --template-file cft-template.yaml \
             --stack-name dataops-stack \
-            --parameter-overrides DataLakeBucket=${{ env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ env.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
+            --parameter-overrides \
+              DataLakeBucket=${{ env.DATALAKE_BUCKET }} \
+              DataWarehouseBucket=${{ env.DATAWAREHOUSE_BUCKET }} \
+              GlueRoleArn=${{ env.GLUE_ROLE_ARN }} \
+              ScriptBucket=${{ env.SCRIPT_BUCKET }} \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset
           DEPLOY_STATUS=$?
@@ -75,14 +79,19 @@ jobs:
         id: get-workflow-name
         if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
         run: |
-          WORKFLOW_NAME=$(aws cloudformation describe-stacks --stack-name dataops-stack --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" --output text)
+          WORKFLOW_NAME=$(aws cloudformation describe-stacks \
+            --stack-name dataops-stack \
+            --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" \
+            --output text)
           echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_OUTPUT
 
       - name: Start Glue Workflow
         id: start-workflow
         if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
         run: |
-          WORKFLOW_RUN_ID=$(aws glue start-workflow-run --name ${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }} --query 'RunId' --output text)
+          WORKFLOW_RUN_ID=$(aws glue start-workflow-run \
+            --name ${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }} \
+            --query 'RunId' --output text)
           echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_OUTPUT
           echo "Workflow run ID: $WORKFLOW_RUN_ID"
 
@@ -93,11 +102,19 @@ jobs:
           WORKFLOW_RUN_ID="${{ steps.start-workflow.outputs.WORKFLOW_RUN_ID }}"
           echo "Waiting for workflow $WORKFLOW_NAME with run ID $WORKFLOW_RUN_ID to complete..."
           while true; do
-            WORKFLOW_STATUS=$(aws glue get-workflow-run --name "$WORKFLOW_NAME" --run-id "$WORKFLOW_RUN_ID" --include-graph --query 'Run.Status' --output text)
+            WORKFLOW_STATUS=$(aws glue get-workflow-run \
+              --name "$WORKFLOW_NAME" \
+              --run-id "$WORKFLOW_RUN_ID" \
+              --include-graph \
+              --query 'Run.Status' --output text)
             echo "Current workflow status: $WORKFLOW_STATUS"
-            
             # Get status of individual jobs
-            aws glue get-workflow-run --name "$WORKFLOW_NAME" --run-id "$WORKFLOW_RUN_ID" --include-graph --query 'Run.Graph.Nodes[].{Name:Name,JobDetails:JobDetails.JobRuns[0].[JobName,JobRunState,ErrorMessage]}' --output json | jq -r '.[] | "Job: \(.Name), Status: \(.JobDetails[1]), Error: \(.JobDetails[2] // "None")"'
+            aws glue get-workflow-run \
+              --name "$WORKFLOW_NAME" \
+              --run-id "$WORKFLOW_RUN_ID" \
+              --include-graph \
+              --query 'Run.Graph.Nodes[].{Name:Name,JobDetails:JobDetails.JobRuns[0].[JobName,JobRunState,ErrorMessage]}' \
+              --output json | jq -r '.[] | "Job: \(.Name), Status: \(.JobDetails[1]), Error: \(.JobDetails[2] // "None")"'
             
             if [ "$WORKFLOW_STATUS" = "COMPLETED" ]; then
               echo "Workflow completed successfully"
