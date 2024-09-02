@@ -27,6 +27,24 @@ jobs:
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: ${{ secrets.AWS_REGION }}
 
+    - name: Check if DataLake Bucket Exists
+      id: check-datalake-bucket
+      run: |
+        set +e
+        aws s3 ls s3://${{ env.DATALAKE_BUCKET }}
+        DATALAKE_BUCKET_EXISTS=$?
+        set -e
+        echo "DATALAKE_BUCKET_EXISTS=$DATALAKE_BUCKET_EXISTS" >> $GITHUB_OUTPUT
+
+    - name: Check if DataWarehouse Bucket Exists
+      id: check-datawarehouse-bucket
+      run: |
+        set +e
+        aws s3 ls s3://${{ env.DATAWAREHOUSE_BUCKET }}
+        DATAWAREHOUSE_BUCKET_EXISTS=$?
+        set -e
+        echo "DATAWAREHOUSE_BUCKET_EXISTS=$DATAWAREHOUSE_BUCKET_EXISTS" >> $GITHUB_OUTPUT
+
     - name: Upload Python scripts to S3
       run: |
         aws s3 cp ingestion.py s3://${{ env.SCRIPT_BUCKET }}/script-ingestion/
@@ -59,7 +77,7 @@ jobs:
         aws cloudformation deploy \
           --template-file cft-template.yaml \
           --stack-name ${{ env.STACK_NAME }} \
-          --parameter-overrides DataLakeBucket=${{ env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ secrets.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
+          --parameter-overrides DataLakeBucket=${{ steps.check-datalake-bucket.outputs.DATALAKE_BUCKET_EXISTS == '0' && env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ steps.check-datawarehouse-bucket.outputs.DATAWAREHOUSE_BUCKET_EXISTS == '0' && env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ secrets.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
           --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
           --no-fail-on-empty-changeset
         DEPLOY_STATUS=$?
