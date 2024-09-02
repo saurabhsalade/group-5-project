@@ -31,43 +31,31 @@ jobs:
       id: check-datalake-bucket
       run: |
         set +e
-        if aws s3 ls s3://${{ env.DATALAKE_BUCKET }} > /dev/null 2>&1; then
-          echo "DataLake bucket ${env.DATALAKE_BUCKET} already exists."
-          echo "DATALAKE_BUCKET_EXISTS=true" >> $GITHUB_ENV
+        if aws s3 ls s3://${DATALAKE_BUCKET} > /dev/null 2>&1; then
+          echo "DataLake bucket ${DATALAKE_BUCKET} already exists."
         else
-          echo "DataLake bucket ${env.DATALAKE_BUCKET} does not exist."
-          echo "DATALAKE_BUCKET_EXISTS=false" >> $GITHUB_ENV
+          echo "DataLake bucket ${DATALAKE_BUCKET} does not exist."
+          exit 1
         fi
+        echo "DATALAKE_BUCKET_EXISTS=true" >> $GITHUB_ENV
 
     - name: Check if DataWarehouse Bucket Exists
       id: check-datawarehouse-bucket
       run: |
         set +e
-        if aws s3 ls s3://${{ env.DATAWAREHOUSE_BUCKET }} > /dev/null 2>&1; then
-          echo "DataWarehouse bucket ${env.DATAWAREHOUSE_BUCKET} already exists."
-          echo "DATAWAREHOUSE_BUCKET_EXISTS=true" >> $GITHUB_ENV
+        if aws s3 ls s3://${DATAWAREHOUSE_BUCKET} > /dev/null 2>&1; then
+          echo "DataWarehouse bucket ${DATAWAREHOUSE_BUCKET} already exists."
         else
-          echo "DataWarehouse bucket ${env.DATAWAREHOUSE_BUCKET} does not exist."
-          echo "DATAWAREHOUSE_BUCKET_EXISTS=false" >> $GITHUB_ENV
+          echo "DataWarehouse bucket ${DATAWAREHOUSE_BUCKET} does not exist."
+          exit 1
         fi
-
-    - name: Create DataLake Bucket if not exists
-      if: env.DATALAKE_BUCKET_EXISTS == 'false'
-      run: |
-        aws s3 mb s3://${{ env.DATALAKE_BUCKET }}
-        echo "DataLake bucket ${env.DATALAKE_BUCKET} created."
-
-    - name: Create DataWarehouse Bucket if not exists
-      if: env.DATAWAREHOUSE_BUCKET_EXISTS == 'false'
-      run: |
-        aws s3 mb s3://${{ env.DATAWAREHOUSE_BUCKET }}
-        echo "DataWarehouse bucket ${env.DATAWAREHOUSE_BUCKET} created."
+        echo "DATAWAREHOUSE_BUCKET_EXISTS=true" >> $GITHUB_ENV
 
     - name: Upload Python scripts to S3
       if: env.DATALAKE_BUCKET_EXISTS == 'true' && env.DATAWAREHOUSE_BUCKET_EXISTS == 'true'
       run: |
-        aws s3 cp ingestion.py s3://${{ env.SCRIPT_BUCKET }}/script-ingestion/
-        aws s3 cp pre_processing.py s3://${{ env.SCRIPT_BUCKET }}/script-pre-processing/
+        aws s3 cp ingestion.py s3://${SCRIPT_BUCKET}/script-ingestion/
+        aws s3 cp pre_processing.py s3://${SCRIPT_BUCKET}/script-pre-processing/
 
     - name: Validate CloudFormation template
       run: |
@@ -92,7 +80,7 @@ jobs:
         aws cloudformation create-stack \
           --stack-name ${{ env.STACK_NAME }} \
           --template-body file://cft-template.yaml \
-          --parameters ParameterKey=DataLakeBucket,ParameterValue=${{ env.DATALAKE_BUCKET }} ParameterKey=DataWarehouseBucket,ParameterValue=${{ env.DATAWAREHOUSE_BUCKET }} ParameterKey=GlueRoleArn,ParameterValue=${{ secrets.GLUE_ROLE_ARN }} ParameterKey=ScriptBucket,ParameterValue=${{ env.SCRIPT_BUCKET }} \
+          --parameters ParameterKey=DataLakeBucket,ParameterValue=${DATALAKE_BUCKET} ParameterKey=DataWarehouseBucket,ParameterValue=${DATAWAREHOUSE_BUCKET} ParameterKey=GlueRoleArn,ParameterValue=${{ secrets.GLUE_ROLE_ARN }} ParameterKey=ScriptBucket,ParameterValue=${SCRIPT_BUCKET} \
           --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
         CREATE_STATUS=$?
         set -e
