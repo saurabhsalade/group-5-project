@@ -31,7 +31,7 @@ jobs:
       id: check-datalake-bucket
       run: |
         set +e
-        aws s3 ls s3://${{ env.DATALAKE_BUCKET }}
+        aws s3 ls s3://${{ env.DATALAKE_BUCKET }} > /dev/null
         DATALAKE_BUCKET_EXISTS=$?
         set -e
         echo "DATALAKE_BUCKET_EXISTS=$DATALAKE_BUCKET_EXISTS" >> $GITHUB_OUTPUT
@@ -40,7 +40,7 @@ jobs:
       id: check-datawarehouse-bucket
       run: |
         set +e
-        aws s3 ls s3://${{ env.DATAWAREHOUSE_BUCKET }}
+        aws s3 ls s3://${{ env.DATAWAREHOUSE_BUCKET }} > /dev/null
         DATAWAREHOUSE_BUCKET_EXISTS=$?
         set -e
         echo "DATAWAREHOUSE_BUCKET_EXISTS=$DATAWAREHOUSE_BUCKET_EXISTS" >> $GITHUB_OUTPUT
@@ -63,21 +63,33 @@ jobs:
         set -e
         echo "STACK_EXISTS=$STACK_EXISTS" >> $GITHUB_OUTPUT
 
-    - name: Fail if stack already exists
+    - name: Print stack exists message and exit
       if: steps.check-stack.outputs.STACK_EXISTS == '0'
       run: |
-        echo "Stack already exists with the name '${{ env.STACK_NAME }}'. Please change the stack name."
+        echo "Please change stack name as it already exists."
         exit 1
 
-    - name: Deploy CloudFormation stack
-      id: deploy-stack
+    - name: Create CloudFormation stack if not exists
+      id: create-stack
       if: steps.check-stack.outputs.STACK_EXISTS != '0'
+      run: |
+        echo "Creating CloudFormation stack ${STACK_NAME}..."
+        aws cloudformation create-stack \
+          --stack-name ${{ env.STACK_NAME }} \
+          --template-body file://cft-template.yaml \
+          --parameters ParameterKey=DataLakeBucket,ParameterValue=${{ env.DATALAKE_BUCKET }} ParameterKey=DataWarehouseBucket,ParameterValue=${{ env.DATAWAREHOUSE_BUCKET }} ParameterKey=GlueRoleArn,ParameterValue=${{ secrets.GLUE_ROLE_ARN }} ParameterKey=ScriptBucket,ParameterValue=${{ env.SCRIPT_BUCKET }} \
+          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+        aws cloudformation wait stack-create-complete --stack-name ${{ env.STACK_NAME }}
+
+    - name: Deploy CloudFormation stack if exists or was created
+      id: deploy-stack
+      if: steps.check-stack.outputs.STACK_EXISTS == '0' || steps.create-stack.outcome == 'success'
       run: |
         set +e
         aws cloudformation deploy \
           --template-file cft-template.yaml \
           --stack-name ${{ env.STACK_NAME }} \
-          --parameter-overrides DataLakeBucket=${{ steps.check-datalake-bucket.outputs.DATALAKE_BUCKET_EXISTS == '0' && env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ steps.check-datawarehouse-bucket.outputs.DATAWAREHOUSE_BUCKET_EXISTS == '0' && env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ secrets.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
+          --parameter-overrides DataLakeBucket=${{ env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ secrets.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
           --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
           --no-fail-on-empty-changeset
         DEPLOY_STATUS=$?
