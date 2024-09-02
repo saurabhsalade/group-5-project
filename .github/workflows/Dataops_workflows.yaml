@@ -27,6 +27,24 @@ jobs:
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: ${{ secrets.AWS_REGION }}
 
+    - name: Check if DataLake Bucket Exists
+      id: check-datalake-bucket
+      run: |
+        set +e
+        aws s3 ls s3://${{ env.DATALAKE_BUCKET }} > /dev/null
+        DATALAKE_BUCKET_EXISTS=$?
+        set -e
+        echo "DATALAKE_BUCKET_EXISTS=$DATALAKE_BUCKET_EXISTS" >> $GITHUB_OUTPUT
+
+    - name: Check if DataWarehouse Bucket Exists
+      id: check-datawarehouse-bucket
+      run: |
+        set +e
+        aws s3 ls s3://${{ env.DATAWAREHOUSE_BUCKET }} > /dev/null
+        DATAWAREHOUSE_BUCKET_EXISTS=$?
+        set -e
+        echo "DATAWAREHOUSE_BUCKET_EXISTS=$DATAWAREHOUSE_BUCKET_EXISTS" >> $GITHUB_OUTPUT
+
     - name: Upload Python scripts to S3
       run: |
         aws s3 cp ingestion.py s3://${{ env.SCRIPT_BUCKET }}/script-ingestion/
@@ -36,44 +54,44 @@ jobs:
       run: |
         aws cloudformation validate-template --template-body file://cft-template.yaml
 
-    - name: Check if CloudFormation stack exists
-      id: check-stack
-      run: |
-        set +e
-        aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }}
-        STACK_EXISTS=$?
-        set -e
-        echo "STACK_EXISTS=$STACK_EXISTS" >> $GITHUB_OUTPUT
-
-    - name: Create CloudFormation stack if not exists
+    - name: Create CloudFormation stack
       id: create-stack
-      if: steps.check-stack.outputs.STACK_EXISTS != '0'
       run: |
         echo "Creating CloudFormation stack ${STACK_NAME}..."
+        set +e
         aws cloudformation create-stack \
           --stack-name ${{ env.STACK_NAME }} \
           --template-body file://cft-template.yaml \
           --parameters ParameterKey=DataLakeBucket,ParameterValue=${{ env.DATALAKE_BUCKET }} ParameterKey=DataWarehouseBucket,ParameterValue=${{ env.DATAWAREHOUSE_BUCKET }} ParameterKey=GlueRoleArn,ParameterValue=${{ secrets.GLUE_ROLE_ARN }} ParameterKey=ScriptBucket,ParameterValue=${{ env.SCRIPT_BUCKET }} \
           --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+        CREATE_STATUS=$?
+        set -e
+        if [ $CREATE_STATUS -ne 0 ]; then
+          echo "Stack creation failed. Checking if stack exists..."
+          STACK_EXISTS=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} --query "Stacks[0].StackStatus" --output text)
+          if [ "$STACK_EXISTS" == "ROLLBACK_COMPLETE" ] || [ "$STACK_EXISTS" == "CREATE_FAILED" ]; then
+            echo "Deleting failed stack..."
+            aws cloudformation delete-stack --stack-name ${{ env.STACK_NAME }}
+            echo "Waiting for stack to be deleted..."
+            aws cloudformation wait stack-delete-complete --stack-name ${{ env.STACK_NAME }}
+          fi
+          exit 1
+        fi
         aws cloudformation wait stack-create-complete --stack-name ${{ env.STACK_NAME }}
 
-    - name: Deploy CloudFormation stack if exists or was created
+    - name: Deploy CloudFormation stack (if necessary)
       id: deploy-stack
-      if: steps.check-stack.outputs.STACK_EXISTS == '0' || steps.create-stack.outcome == 'success'
       run: |
-        set +e
+        echo "Deploying CloudFormation stack ${STACK_NAME}..."
         aws cloudformation deploy \
           --template-file cft-template.yaml \
           --stack-name ${{ env.STACK_NAME }} \
           --parameter-overrides DataLakeBucket=${{ env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ secrets.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
           --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
           --no-fail-on-empty-changeset
-        DEPLOY_STATUS=$?
-        set -e
-        echo "DEPLOY_STATUS=$DEPLOY_STATUS" >> $GITHUB_OUTPUT
 
     - name: Force delete stack if deployment failed
-      if: failure() || steps.deploy-stack.outputs.DEPLOY_STATUS != '0'
+      if: failure() || steps.deploy-stack.outcome == 'failure'
       run: |
         echo "Deployment failed or rollback occurred. Forcing stack deletion..."
         aws cloudformation delete-stack --stack-name ${{ env.STACK_NAME }}
@@ -82,21 +100,21 @@ jobs:
 
     - name: Get Workflow Name
       id: get-workflow-name
-      if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
+      if: success()
       run: |
         WORKFLOW_NAME=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" --output text)
         echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_OUTPUT
 
     - name: Start Glue Workflow
       id: start-workflow
-      if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
+      if: success()
       run: |
         WORKFLOW_RUN_ID=$(aws glue start-workflow-run --name ${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }} --query 'RunId' --output text)
         echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_OUTPUT
         echo "Workflow run ID: $WORKFLOW_RUN_ID"
 
     - name: Wait for Workflow Completion
-      if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
+      if: success()
       run: |
         WORKFLOW_NAME="${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }}"
         WORKFLOW_RUN_ID="${{ steps.start-workflow.outputs.WORKFLOW_RUN_ID }}"
