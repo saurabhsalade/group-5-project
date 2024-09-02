@@ -49,10 +49,10 @@ jobs:
       run: |
         if [ "${{ env.STACK_EXISTS }}" == "false" ]; then
           echo "Stack does not exist. Creating new stack..."
-          aws cloudformation create-stack \
+          aws cloudformation deploy \
             --stack-name ${{ env.STACK_NAME }} \
-            --template-body file://cft-template.yaml \
-            --parameters ParameterKey=DataLakeBucket,ParameterValue=${{ env.DATALAKE_BUCKET }} ParameterKey=DataWarehouseBucket,ParameterValue=${{ env.DATAWAREHOUSE_BUCKET }} ParameterKey=GlueRoleArn,ParameterValue=${{ secrets.GLUE_ROLE_ARN }} ParameterKey=ScriptBucket,ParameterValue=${{ env.SCRIPT_BUCKET }} \
+            --template-file cft-template.yaml \
+            --parameter-overrides DataLakeBucket=${{ env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ secrets.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
             --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 
           echo "Waiting for stack creation to complete..."
