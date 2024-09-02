@@ -1,4 +1,4 @@
-name: Deploy CloudFormation and Run AWS Glue Workflow
+name: Deploy CloudFormation Stack and Run AWS Glue Workflow
 
 on:
   push:
@@ -27,38 +27,6 @@ jobs:
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Check if DataLake Bucket Exists
-      id: check-datalake-bucket
-      run: |
-        set +e
-        if aws s3 ls s3://${DATALAKE_BUCKET} > /dev/null 2>&1; then
-          echo "DataLake bucket ${DATALAKE_BUCKET} already exists."
-          echo "DATALAKE_BUCKET_EXISTS=true" >> $GITHUB_ENV
-        else
-          echo "DataLake bucket ${DATALAKE_BUCKET} does not exist."
-          echo "DATALAKE_BUCKET_EXISTS=false" >> $GITHUB_ENV
-          exit 1
-        fi
-
-    - name: Check if DataWarehouse Bucket Exists
-      id: check-datawarehouse-bucket
-      run: |
-        set +e
-        if aws s3 ls s3://${DATAWAREHOUSE_BUCKET} > /dev/null 2>&1; then
-          echo "DataWarehouse bucket ${DATAWAREHOUSE_BUCKET} already exists."
-          echo "DATAWAREHOUSE_BUCKET_EXISTS=true" >> $GITHUB_ENV
-        else
-          echo "DataWarehouse bucket ${DATAWAREHOUSE_BUCKET} does not exist."
-          echo "DATAWAREHOUSE_BUCKET_EXISTS=false" >> $GITHUB_ENV
-          exit 1
-        fi
-
-    - name: Upload Python scripts to S3
-      if: env.DATALAKE_BUCKET_EXISTS == 'true' && env.DATAWAREHOUSE_BUCKET_EXISTS == 'true'
-      run: |
-        aws s3 cp ingestion.py s3://${SCRIPT_BUCKET}/script-ingestion/
-        aws s3 cp pre_processing.py s3://${SCRIPT_BUCKET}/script-pre-processing/
-
     - name: Validate CloudFormation template
       run: |
         aws cloudformation validate-template --template-body file://cft-template.yaml
@@ -76,28 +44,38 @@ jobs:
         fi
         set -e
 
-    - name: Create and Deploy CloudFormation stack
-      id: create-deploy-stack
-      if: env.STACK_EXISTS == 'false'
+    - name: Deploy or Update CloudFormation stack
+      id: deploy-update-stack
+      run: |
+        if [ "${{ env.STACK_EXISTS }}" == "false" ]; then
+          echo "Stack does not exist. Creating new stack..."
+          aws cloudformation create-stack \
+            --stack-name ${{ env.STACK_NAME }} \
+            --template-body file://cft-template.yaml \
+            --parameters ParameterKey=DataLakeBucket,ParameterValue=${{ env.DATALAKE_BUCKET }} ParameterKey=DataWarehouseBucket,ParameterValue=${{ env.DATAWAREHOUSE_BUCKET }} ParameterKey=GlueRoleArn,ParameterValue=${{ secrets.GLUE_ROLE_ARN }} ParameterKey=ScriptBucket,ParameterValue=${{ env.SCRIPT_BUCKET }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+
+          echo "Waiting for stack creation to complete..."
+          aws cloudformation wait stack-create-complete --stack-name ${{ env.STACK_NAME }}
+        else
+          echo "Stack exists. Updating stack..."
+          aws cloudformation update-stack \
+            --stack-name ${{ env.STACK_NAME }} \
+            --template-body file://cft-template.yaml \
+            --parameters ParameterKey=DataLakeBucket,ParameterValue=${{ env.DATALAKE_BUCKET }} ParameterKey=DataWarehouseBucket,ParameterValue=${{ env.DATAWAREHOUSE_BUCKET }} ParameterKey=GlueRoleArn,ParameterValue=${{ secrets.GLUE_ROLE_ARN }} ParameterKey=ScriptBucket,ParameterValue=${{ env.SCRIPT_BUCKET }} \
+            --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+
+          echo "Waiting for stack update to complete..."
+          aws cloudformation wait stack-update-complete --stack-name ${{ env.STACK_NAME }}
+        fi
+
+    - name: Handle Stack Deployment Failure
+      if: failure()
       run: |
         set -e
-        echo "Creating CloudFormation stack ${{ env.STACK_NAME }}..."
-        aws cloudformation create-stack \
-          --stack-name ${{ env.STACK_NAME }} \
-          --template-body file://cft-template.yaml \
-          --parameters ParameterKey=DataLakeBucket,ParameterValue=${{ env.DATALAKE_BUCKET }} ParameterKey=DataWarehouseBucket,ParameterValue=${{ env.DATAWAREHOUSE_BUCKET }} ParameterKey=GlueRoleArn,ParameterValue=${{ secrets.GLUE_ROLE_ARN }} ParameterKey=ScriptBucket,ParameterValue=${{ env.SCRIPT_BUCKET }} \
-          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
-
-        echo "Waiting for stack creation to complete..."
-        aws cloudformation wait stack-create-complete --stack-name ${{ env.STACK_NAME }}
-
-    - name: Handle Stack Creation Failure
-      if: failure() && env.STACK_EXISTS == 'false'
-      run: |
-        set -e
-        echo "Stack creation failed. Checking stack status..."
+        echo "Stack deployment failed. Checking stack status..."
         STACK_STATUS=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} --query "Stacks[0].StackStatus" --output text)
-        if [ "$STACK_STATUS" == "ROLLBACK_COMPLETE" ] || [ "$STACK_STATUS" == "CREATE_FAILED" ]; then
+        if [ "$STACK_STATUS" == "ROLLBACK_COMPLETE" ] || [ "$STACK_STATUS" == "UPDATE_FAILED" ]; then
           echo "Deleting failed stack..."
           aws cloudformation delete-stack --stack-name ${{ env.STACK_NAME }}
           echo "Waiting for stack deletion to complete..."
