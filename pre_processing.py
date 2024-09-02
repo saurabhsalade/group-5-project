@@ -1,7 +1,5 @@
 import sys
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, lit, when
-from pyspark.sql.types import LongType, StringType, DoubleType, TimestampType, IntegerType
 
 try:
     # AWS Glue-specific imports
@@ -22,61 +20,61 @@ try:
 
     # Load data from S3 (Parquet format)
     s3_input_path = "s3://datalake-dbda-group5/vehicles-ingestion/"
-    dataFrame = spark.read.parquet(s3_input_path)
+    spark.read.parquet(s3_input_path).createOrReplaceTempView("vehicles")
 
     # Debugging: Print schema and show data
-    dataFrame.printSchema()
-    dataFrame.show(5)
+    spark.sql("DESCRIBE TABLE vehicles").show()
+    spark.sql("SELECT * FROM vehicles LIMIT 5").show()
 
-    if dataFrame.rdd.isEmpty():
+    # Check if the DataFrame is empty
+    count = spark.sql("SELECT COUNT(*) FROM vehicles").collect()[0][0]
+    if count == 0:
         print("DataFrame is empty. Please check the input path and data availability.")
     else:
         # Drop unwanted columns
         columns_to_drop = ["region_url", "image_url", "description"]
-        dataFrame = dataFrame.drop(*columns_to_drop)
+        selected_columns = [col for col in spark.table("vehicles").columns if col not in columns_to_drop]
+        spark.sql(f"""
+            SELECT {", ".join(selected_columns)}
+            FROM vehicles
+        """).createOrReplaceTempView("vehicles")
 
-        print("Number of partitions before coalescing:", dataFrame.rdd.getNumPartitions())
+        print("Number of partitions before coalescing:", spark.table("vehicles").rdd.getNumPartitions())
 
         # Replace blank or null values with 'NA' for string columns and null for numeric columns
-        dataFrame = dataFrame.withColumn("id", 
-                                         when(col("id").isNull(), lit(0).cast(LongType()))
-                                         .otherwise(col("id").cast(LongType()))) \
-                             .withColumn("price", 
-                                         when(col("price").isNull(), lit(0).cast(LongType()))
-                                         .otherwise(col("price").cast(LongType()))) \
-                             .withColumn("year", 
-                                         when(col("year").isNull(), lit(0).cast(IntegerType()))
-                                         .otherwise(col("year").cast(IntegerType()))) \
-                             .withColumn("odometer", 
-                                         when(col("odometer").isNull(), lit(0).cast(LongType()))
-                                         .otherwise(col("odometer").cast(LongType()))) \
-                             .withColumn("lat", 
-                                         when(col("lat").isNull(), lit(0.0).cast(DoubleType()))
-                                         .otherwise(col("lat").cast(DoubleType()))) \
-                             .withColumn("long", 
-                                         when(col("long").isNull(), lit(0.0).cast(DoubleType()))
-                                         .otherwise(col("long").cast(DoubleType()))) \
-                             .withColumn("posting_date", 
-                                         when(col("posting_date").isNull(), lit(None).cast(TimestampType()))
-                                         .otherwise(col("posting_date").cast(TimestampType())))
-
-        # Handle string columns for other fields with NA as replacement for empty strings or nulls
-        columns_to_fill_with_na = ["manufacturer", "model", "condition", "cylinders", "fuel", "title_status", 
-                                   "transmission", "Vin", "drive", "size", "type", "paint_color", "county"]
-        for column in columns_to_fill_with_na:
-            dataFrame = dataFrame.withColumn(
-                column, 
-                when(col(column).isNull() | (col(column) == ""), lit("NA").cast(StringType()))
-                .otherwise(col(column).cast(StringType()))
-            )
+        sql_query = """
+            SELECT 
+                COALESCE(CAST(NULLIF(id, '') AS BIGINT), 0) AS id,
+                COALESCE(CAST(NULLIF(price, '') AS BIGINT), 0) AS price,
+                COALESCE(CAST(NULLIF(year, '') AS INT), 0) AS year,
+                COALESCE(CAST(NULLIF(odometer, '') AS BIGINT), 0) AS odometer,
+                COALESCE(CAST(NULLIF(lat, '') AS DOUBLE), 0.0) AS lat,
+                COALESCE(CAST(NULLIF(long, '') AS DOUBLE), 0.0) AS long,
+                COALESCE(CAST(NULLIF(posting_date, '') AS TIMESTAMP), NULL) AS posting_date,
+                COALESCE(NULLIF(manufacturer, ''), 'NA') AS manufacturer,
+                COALESCE(NULLIF(model, ''), 'NA') AS model,
+                COALESCE(NULLIF(condition, ''), 'NA') AS condition,
+                COALESCE(NULLIF(cylinders, ''), 'NA') AS cylinders,
+                COALESCE(NULLIF(fuel, ''), 'NA') AS fuel,
+                COALESCE(NULLIF(title_status, ''), 'NA') AS title_status,
+                COALESCE(NULLIF(transmission, ''), 'NA') AS transmission,
+                COALESCE(NULLIF(Vin, ''), 'NA') AS Vin,
+                COALESCE(NULLIF(drive, ''), 'NA') AS drive,
+                COALESCE(NULLIF(size, ''), 'NA') AS size,
+                COALESCE(NULLIF(type, ''), 'NA') AS type,
+                COALESCE(NULLIF(paint_color, ''), 'NA') AS paint_color,
+                COALESCE(NULLIF(county, ''), 'NA') AS county
+            FROM vehicles
+        """
+        spark.sql(sql_query).createOrReplaceTempView("vehicles_transformed")
 
         # Coalesce to a single partition (file)
-        dataFrame = dataFrame.coalesce(1)
-        print("Number of partitions after coalescing:", dataFrame.rdd.getNumPartitions())
+        vehicles_df = spark.table("vehicles_transformed").coalesce(1)
+        print("Number of partitions after coalescing:", vehicles_df.rdd.getNumPartitions())
 
         # Write the transformed data back to S3 in Parquet format with Snappy compression
         s3_output_path = "s3://datawarehouse-dbda-group5/vehicles-transform/"
-        dataFrame.write.mode("overwrite").parquet(s3_output_path, compression="snappy")
+        vehicles_df.write.mode("overwrite").parquet(s3_output_path, compression="snappy")
 
     if 'JOB_NAME' in sys.argv:
         job.commit()
