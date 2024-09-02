@@ -54,19 +54,45 @@ jobs:
       run: |
         aws cloudformation validate-template --template-body file://cft-template.yaml
 
-    - name: Delete existing CloudFormation stack if it exists
+    - name: Check if CloudFormation stack exists
+      id: check-stack
       run: |
-        if aws cloudformation describe-stacks --stack-name dataops-stack &>/dev/null; then
-          echo "Stack exists, deleting..."
-          aws cloudformation delete-stack --stack-name dataops-stack
-          echo "Waiting for stack to be deleted..."
-          aws cloudformation wait stack-delete-complete --stack-name dataops-stack
+        if aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} &>/dev/null; then
+          echo "Stack ${{ env.STACK_NAME }} already exists. Ending workflow."
+          exit 0
         else
           echo "Stack does not exist, proceeding with deployment..."
         fi
 
+    - name: Create CloudFormation stack
+      id: create-stack
+      if: steps.check-stack.outcome == 'success'
+      run: |
+        echo "Creating CloudFormation stack ${STACK_NAME}..."
+        set +e
+        aws cloudformation create-stack \
+          --stack-name ${{ env.STACK_NAME }} \
+          --template-body file://cft-template.yaml \
+          --parameters ParameterKey=DataLakeBucket,ParameterValue=${{ env.DATALAKE_BUCKET }} ParameterKey=DataWarehouseBucket,ParameterValue=${{ env.DATAWAREHOUSE_BUCKET }} ParameterKey=GlueRoleArn,ParameterValue=${{ secrets.GLUE_ROLE_ARN }} ParameterKey=ScriptBucket,ParameterValue=${{ env.SCRIPT_BUCKET }} \
+          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+        CREATE_STATUS=$?
+        set -e
+        if [ $CREATE_STATUS -ne 0 ]; then
+          echo "Stack creation failed. Checking if stack exists..."
+          STACK_EXISTS=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} --query "Stacks[0].StackStatus" --output text)
+          if [ "$STACK_EXISTS" == "ROLLBACK_COMPLETE" ] || [ "$STACK_EXISTS" == "CREATE_FAILED" ]; then
+            echo "Deleting failed stack..."
+            aws cloudformation delete-stack --stack-name ${{ env.STACK_NAME }}
+            echo "Waiting for stack to be deleted..."
+            aws cloudformation wait stack-delete-complete --stack-name ${{ env.STACK_NAME }}
+          fi
+          exit 1
+        fi
+        aws cloudformation wait stack-create-complete --stack-name ${{ env.STACK_NAME }}
+
     - name: Deploy CloudFormation stack
       id: deploy-stack
+      if: steps.check-stack.outcome == 'success'
       run: |
         set +e
         aws cloudformation deploy \
