@@ -33,11 +33,12 @@ jobs:
         set +e
         if aws s3 ls s3://${DATALAKE_BUCKET} > /dev/null 2>&1; then
           echo "DataLake bucket ${DATALAKE_BUCKET} already exists."
+          echo "DATALAKE_BUCKET_EXISTS=true" >> $GITHUB_ENV
         else
           echo "DataLake bucket ${DATALAKE_BUCKET} does not exist."
+          echo "DATALAKE_BUCKET_EXISTS=false" >> $GITHUB_ENV
           exit 1
         fi
-        echo "DATALAKE_BUCKET_EXISTS=true" >> $GITHUB_ENV
 
     - name: Check if DataWarehouse Bucket Exists
       id: check-datawarehouse-bucket
@@ -45,11 +46,12 @@ jobs:
         set +e
         if aws s3 ls s3://${DATAWAREHOUSE_BUCKET} > /dev/null 2>&1; then
           echo "DataWarehouse bucket ${DATAWAREHOUSE_BUCKET} already exists."
+          echo "DATAWAREHOUSE_BUCKET_EXISTS=true" >> $GITHUB_ENV
         else
           echo "DataWarehouse bucket ${DATAWAREHOUSE_BUCKET} does not exist."
+          echo "DATAWAREHOUSE_BUCKET_EXISTS=false" >> $GITHUB_ENV
           exit 1
         fi
-        echo "DATAWAREHOUSE_BUCKET_EXISTS=true" >> $GITHUB_ENV
 
     - name: Upload Python scripts to S3
       if: env.DATALAKE_BUCKET_EXISTS == 'true' && env.DATAWAREHOUSE_BUCKET_EXISTS == 'true'
@@ -61,7 +63,7 @@ jobs:
       run: |
         aws cloudformation validate-template --template-body file://cft-template.yaml
 
-        - name: Check if CloudFormation stack exists
+    - name: Check if CloudFormation stack exists
       id: check-stack
       run: |
         set +e
