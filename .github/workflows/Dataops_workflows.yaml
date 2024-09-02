@@ -33,11 +33,11 @@ jobs:
         set +e
         if aws s3 ls s3://${{ env.DATALAKE_BUCKET }} > /dev/null 2>&1; then
           echo "DataLake bucket ${env.DATALAKE_BUCKET} already exists."
+          echo "DATALAKE_BUCKET_EXISTS=true" >> $GITHUB_ENV
         else
           echo "DataLake bucket ${env.DATALAKE_BUCKET} does not exist."
-          exit 1
+          echo "DATALAKE_BUCKET_EXISTS=false" >> $GITHUB_ENV
         fi
-        echo "DATALAKE_BUCKET_EXISTS=true" >> $GITHUB_ENV
 
     - name: Check if DataWarehouse Bucket Exists
       id: check-datawarehouse-bucket
@@ -45,11 +45,23 @@ jobs:
         set +e
         if aws s3 ls s3://${{ env.DATAWAREHOUSE_BUCKET }} > /dev/null 2>&1; then
           echo "DataWarehouse bucket ${env.DATAWAREHOUSE_BUCKET} already exists."
+          echo "DATAWAREHOUSE_BUCKET_EXISTS=true" >> $GITHUB_ENV
         else
           echo "DataWarehouse bucket ${env.DATAWAREHOUSE_BUCKET} does not exist."
-          exit 1
+          echo "DATAWAREHOUSE_BUCKET_EXISTS=false" >> $GITHUB_ENV
         fi
-        echo "DATAWAREHOUSE_BUCKET_EXISTS=true" >> $GITHUB_ENV
+
+    - name: Create DataLake Bucket if not exists
+      if: env.DATALAKE_BUCKET_EXISTS == 'false'
+      run: |
+        aws s3 mb s3://${{ env.DATALAKE_BUCKET }}
+        echo "DataLake bucket ${env.DATALAKE_BUCKET} created."
+
+    - name: Create DataWarehouse Bucket if not exists
+      if: env.DATAWAREHOUSE_BUCKET_EXISTS == 'false'
+      run: |
+        aws s3 mb s3://${{ env.DATAWAREHOUSE_BUCKET }}
+        echo "DataWarehouse bucket ${env.DATAWAREHOUSE_BUCKET} created."
 
     - name: Upload Python scripts to S3
       if: env.DATALAKE_BUCKET_EXISTS == 'true' && env.DATAWAREHOUSE_BUCKET_EXISTS == 'true'
@@ -65,17 +77,17 @@ jobs:
       id: check-stack
       run: |
         if aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} &>/dev/null; then
-          echo "Stack ${{ env.STACK_NAME }} already exists. Ending workflow."
-          exit 0
+          echo "Stack ${{ env.STACK_NAME }} already exists."
+          echo "STACK_EXISTS=true" >> $GITHUB_ENV
         else
-          echo "Stack does not exist, proceeding with deployment..."
+          echo "Stack does not exist."
+          echo "STACK_EXISTS=false" >> $GITHUB_ENV
         fi
 
-    - name: Create CloudFormation stack
-      id: create-stack
-      if: steps.check-stack.outcome == 'success'
+    - name: Create and Deploy CloudFormation stack
+      id: create-deploy-stack
+      if: env.STACK_EXISTS == 'false'
       run: |
-        echo "Creating CloudFormation stack ${STACK_NAME}..."
         set +e
         aws cloudformation create-stack \
           --stack-name ${{ env.STACK_NAME }} \
@@ -97,46 +109,23 @@ jobs:
         fi
         aws cloudformation wait stack-create-complete --stack-name ${{ env.STACK_NAME }}
 
-    - name: Deploy CloudFormation stack
-      id: deploy-stack
-      if: steps.check-stack.outcome == 'success'
-      run: |
-        set +e
-        aws cloudformation deploy \
-          --template-file cft-template.yaml \
-          --stack-name dataops-stack \
-          --parameter-overrides DataLakeBucket=${{ env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ secrets.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
-          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-          --no-fail-on-empty-changeset
-        DEPLOY_STATUS=$?
-        set -e
-        echo "DEPLOY_STATUS=$DEPLOY_STATUS" >> $GITHUB_OUTPUT
-
-    - name: Force delete stack if deployment failed
-      if: failure() || steps.deploy-stack.outputs.DEPLOY_STATUS != '0'
-      run: |
-        echo "Deployment failed or rollback occurred. Forcing stack deletion..."
-        aws cloudformation delete-stack --stack-name dataops-stack
-        echo "Waiting for stack to be deleted..."
-        aws cloudformation wait stack-delete-complete --stack-name dataops-stack
-
     - name: Get Workflow Name
       id: get-workflow-name
-      if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
+      if: success() && env.STACK_EXISTS == 'false'
       run: |
-        WORKFLOW_NAME=$(aws cloudformation describe-stacks --stack-name dataops-stack --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" --output text)
+        WORKFLOW_NAME=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" --output text)
         echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_OUTPUT
 
     - name: Start Glue Workflow
       id: start-workflow
-      if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
+      if: success() && env.STACK_EXISTS == 'false'
       run: |
         WORKFLOW_RUN_ID=$(aws glue start-workflow-run --name ${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }} --query 'RunId' --output text)
         echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_OUTPUT
         echo "Workflow run ID: $WORKFLOW_RUN_ID"
 
     - name: Wait for Workflow Completion
-      if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
+      if: success() && env.STACK_EXISTS == 'false'
       run: |
         WORKFLOW_NAME="${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }}"
         WORKFLOW_RUN_ID="${{ steps.start-workflow.outputs.WORKFLOW_RUN_ID }}"
