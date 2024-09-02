@@ -27,24 +27,6 @@ jobs:
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Check if DataLake Bucket Exists
-      id: check-datalake-bucket
-      run: |
-        set +e
-        aws s3 ls s3://${{ env.DATALAKE_BUCKET }} > /dev/null
-        DATALAKE_BUCKET_EXISTS=$?
-        set -e
-        echo "DATALAKE_BUCKET_EXISTS=$DATALAKE_BUCKET_EXISTS" >> $GITHUB_OUTPUT
-
-    - name: Check if DataWarehouse Bucket Exists
-      id: check-datawarehouse-bucket
-      run: |
-        set +e
-        aws s3 ls s3://${{ env.DATAWAREHOUSE_BUCKET }} > /dev/null
-        DATAWAREHOUSE_BUCKET_EXISTS=$?
-        set -e
-        echo "DATAWAREHOUSE_BUCKET_EXISTS=$DATAWAREHOUSE_BUCKET_EXISTS" >> $GITHUB_OUTPUT
-
     - name: Upload Python scripts to S3
       run: |
         aws s3 cp ingestion.py s3://${{ env.SCRIPT_BUCKET }}/script-ingestion/
@@ -62,12 +44,6 @@ jobs:
         STACK_EXISTS=$?
         set -e
         echo "STACK_EXISTS=$STACK_EXISTS" >> $GITHUB_OUTPUT
-
-    - name: Print stack exists message and exit
-      if: steps.check-stack.outputs.STACK_EXISTS == '0'
-      run: |
-        echo "Please change stack name as it already exists."
-        exit 1
 
     - name: Create CloudFormation stack if not exists
       id: create-stack
