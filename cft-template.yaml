@@ -13,9 +13,11 @@ Parameters:
   GlueRoleArn:
     Type: String
     Description: "The ARN of the IAM role for AWS Glue"
+
 Conditions:
   CreateDataLakeBucket: !Not [!Equals [!Ref DataLakeBucket, '']]
   CreateDataWarehouseBucket: !Not [!Equals [!Ref DataWarehouseBucket, '']]
+
 Resources:
   MyS3Bucket1:
     Type: AWS::S3::Bucket
@@ -27,6 +29,7 @@ Resources:
       Tags:
         - Key: Name
           Value: group5-1
+
   MyS3Bucket2:
     Type: AWS::S3::Bucket
     Condition: CreateDataWarehouseBucket
@@ -37,6 +40,7 @@ Resources:
       Tags:
         - Key: Name
           Value: group5-2
+
   DataOpsGlueIngestionJob:
     Type: AWS::Glue::Job
     Properties:
@@ -49,6 +53,7 @@ Resources:
       GlueVersion: "4.0"
       NumberOfWorkers: 10
       WorkerType: "G.1X"
+
   DataOpsGluePreProcessingJob:
     Type: AWS::Glue::Job
     Properties:
@@ -64,14 +69,9 @@ Resources:
       DefaultArguments:
         '--TempDir': !Sub "s3://${DataLakeBucket}/temp/"
         '--job-language': 'python'
-        '--enable-continuous-cloudwatch-log': 'true'
-        '--enable-metrics': 'true'
-        '--enable-spark-ui': 'true'
-        '--spark-event-logs-path': !Sub "s3://${DataLakeBucket}/spark-history/"
 
   DataOpsGlueWorkflow:
     Type: AWS::Glue::Workflow
-@@ -93,16 +89,20 @@ Resources:
 
   DataOpsIngestionToPreProcessingTrigger:
     Type: AWS::Glue::Trigger
@@ -86,9 +86,6 @@ Resources:
       Actions:
         - JobName: !Ref DataOpsGluePreProcessingJob
       Predicate:
-        Conditions:
-          - LogicalOperator: EQUALS
-            JobName: !Ref DataOpsGlueIngestionJob
         Conditions: 
           - JobName: !Ref DataOpsGlueIngestionJob
             LogicalOperator: EQUALS
@@ -112,18 +109,22 @@ Outputs:
       - CreateDataLakeBucket
       - !Sub "Data Lake Bucket '${MyS3Bucket1}' was created"
       - "No new Data Lake Bucket was created"
+  
   DataWarehouseBucketInfo:
     Description: 'Information about the Data Warehouse S3 Bucket'
     Value: !If 
       - CreateDataWarehouseBucket
       - !Sub "Data Warehouse Bucket '${MyS3Bucket2}' was created"
       - "No new Data Warehouse Bucket was created"
+  
   PreProcessingJobName:
     Description: 'Name of the Glue Pre-Processing Job'
     Value: !Ref DataOpsGluePreProcessingJob
+  
   WorkflowName:
     Description: 'Name of the Glue Workflow'
     Value: !Ref DataOpsGlueWorkflow
+  
   StartTriggerName:
     Description: 'Name of the Workflow Start Trigger'
-    Value: !Ref DataOpsWorkflowStartTrigger
+    Value: !Ref DataOpsIngestionToPreProcessingTrigger
