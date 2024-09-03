@@ -13,9 +13,7 @@ Parameters:
   GlueRoleArn:
     Type: String
     Description: "The ARN of the IAM role for AWS Glue"
-Conditions:
-  CreateDataLakeBucket: !Not [!Equals [!Ref DataLakeBucket, '']]
-  CreateDataWarehouseBucket: !Not [!Equals [!Ref DataWarehouseBucket, '']]
+
 Resources:
   MyS3Bucket1:
     Type: AWS::S3::Bucket
