@@ -67,9 +67,6 @@ Resources:
       GlueVersion: "4.0"
       NumberOfWorkers: 10
       WorkerType: "G.1X"
-      DefaultArguments:
-        '--TempDir': !Sub "s3://${DataLakeBucket}/temp/"
-        '--job-language': 'python'
 
   DataOpsGlueWorkflow:
     Type: AWS::Glue::Workflow
