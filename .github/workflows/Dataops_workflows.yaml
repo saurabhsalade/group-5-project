@@ -41,13 +41,13 @@ jobs:
         DEPLOY_STATUS=$?
         set -e
         echo "DEPLOY_STATUS=$DEPLOY_STATUS" >> $GITHUB_OUTPUT
-    - name: Force delete stack if deployment failed
-      if: failure() || steps.deploy-stack.outputs.DEPLOY_STATUS != '0'
-      run: |
-        echo "Deployment failed or rollback occurred. Forcing stack deletion..."
-        aws cloudformation delete-stack --stack-name dataops-stack
-        echo "Waiting for stack to be deleted..."
-        aws cloudformation wait stack-delete-complete --stack-name dataops-stack
+    # - name: Force delete stack if deployment failed
+    #   if: failure() || steps.deploy-stack.outputs.DEPLOY_STATUS != '0'
+    #   run: |
+    #     echo "Deployment failed or rollback occurred. Forcing stack deletion..."
+    #     aws cloudformation delete-stack --stack-name dataops-stack
+    #     echo "Waiting for stack to be deleted..."
+    #     aws cloudformation wait stack-delete-complete --stack-name dataops-stack
     - name: Get Workflow Name
       id: get-workflow-name
       if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
