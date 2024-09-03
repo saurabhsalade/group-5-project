@@ -54,6 +54,7 @@ jobs:
       run: |
         WORKFLOW_NAME=$(aws cloudformation describe-stacks --stack-name dataops-stack --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" --output text)
         echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_OUTPUT
+
     - name: Start Glue Workflow
       id: start-workflow
       if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
@@ -61,6 +62,7 @@ jobs:
         WORKFLOW_RUN_ID=$(aws glue start-workflow-run --name ${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }} --query 'RunId' --output text)
         echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_OUTPUT
         echo "Workflow run ID: $WORKFLOW_RUN_ID"
+
     - name: Wait for Workflow Completion
       if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
       run: |
@@ -68,24 +70,20 @@ jobs:
         WORKFLOW_RUN_ID="${{ steps.start-workflow.outputs.WORKFLOW_RUN_ID }}"
         echo "Waiting for workflow $WORKFLOW_NAME with run ID $WORKFLOW_RUN_ID to complete..."
         while true; do
-          STATUS=$(aws glue get-workflow-run --name "$WORKFLOW_NAME" --run-id "$WORKFLOW_RUN_ID" --query 'Run.Status' --output text)
-          echo "Current status: $STATUS"
-          if [ "$STATUS" = "COMPLETED" ]; then
-            WORKFLOW_STATUS=$(aws glue get-workflow-run --name "$WORKFLOW_NAME" --run-id "$WORKFLOW_RUN_ID" --include-graph --query 'Run.Status' --output text)
-            echo "Current workflow status: $WORKFLOW_STATUS"
-            
-            # Get status of individual jobs
-            aws glue get-workflow-run --name "$WORKFLOW_NAME" --run-id "$WORKFLOW_RUN_ID" --include-graph --query 'Run.Graph.Nodes[].{Name:Name,JobDetails:JobDetails.JobRuns[0].[JobName,JobRunState,ErrorMessage]}' --output json | jq -r '.[] | "Job: \(.Name), Status: \(.JobDetails[1]), Error: \(.JobDetails[2] // "None")"'
-            
-            if [ "$WORKFLOW_STATUS" = "COMPLETED" ]; then
-              echo "Workflow completed successfully"
-              break
-            elif [ "$STATUS" = "RUNNING" ] || [ "$STATUS" = "STARTING" ]; then
-              echo "Workflow is still running. Waiting..."
-              sleep 60
-            else
-              echo "Workflow failed or stopped unexpectedly. Status: $STATUS"
-              echo "Workflow failed or stopped unexpectedly. Status: $WORKFLOW_STATUS"
-              exit 1
-            fi
-          done
+          WORKFLOW_STATUS=$(aws glue get-workflow-run --name "$WORKFLOW_NAME" --run-id "$WORKFLOW_RUN_ID" --include-graph --query 'Run.Status' --output text)
+          echo "Current workflow status: $WORKFLOW_STATUS"
+          
+          # Get status of individual jobs
+          aws glue get-workflow-run --name "$WORKFLOW_NAME" --run-id "$WORKFLOW_RUN_ID" --include-graph --query 'Run.Graph.Nodes[].{Name:Name,JobDetails:JobDetails.JobRuns[0].[JobName,JobRunState,ErrorMessage]}' --output json | jq -r '.[] | "Job: \(.Name), Status: \(.JobDetails[1]), Error: \(.JobDetails[2] // "None")"'
+          
+          if [ "$WORKFLOW_STATUS" = "COMPLETED" ]; then
+            echo "Workflow completed successfully"
+            break
+          elif [ "$WORKFLOW_STATUS" = "RUNNING" ] || [ "$WORKFLOW_STATUS" = "STARTING" ]; then
+            echo "Workflow is still running. Waiting..."
+            sleep 60
+          else
+            echo "Workflow failed or stopped unexpectedly. Status: $WORKFLOW_STATUS"
+            exit 1
+          fi
+        done
