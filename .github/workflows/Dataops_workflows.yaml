@@ -1,19 +1,25 @@
 name: Deploy CloudFormation and Run AWS Glue Workflow
+
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      DATALAKE_BUCKET: ${{ secrets.DATALAKE_BUCKET }}
-      DATAWAREHOUSE_BUCKET: ${{ secrets.DATAWAREHOUSE_BUCKET }}
-      SCRIPT_BUCKET: ${{ secrets.SCRIPT_BUCKET }}
+      DATALAKE_BUCKET: ${{ vars.DATALAKE_BUCKET }}
+      DATAWAREHOUSE_BUCKET: ${{ vars.DATAWAREHOUSE_BUCKET }}
+      SCRIPT_BUCKET: ${{ vars.SCRIPT_BUCKET }}
+      STACK_NAME: ${{ vars.STACK_NAME }}
+      GLUE_ROLE_ARN: ${{ secrets.GLUE_ROLE_ARN }}
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+
     - name: Set up AWS CLI
       uses: aws-actions/configure-aws-credentials@v3
       with:
@@ -21,45 +27,46 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
         aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Install jq
+      run: sudo apt-get install jq
+
     - name: Upload Python scripts to S3
       run: |
         aws s3 cp ingestion.py s3://${{ env.SCRIPT_BUCKET }}/script-ingestion/
         aws s3 cp pre_processing.py s3://${{ env.SCRIPT_BUCKET }}/script-pre-processing/
+
     - name: Validate CloudFormation template
       run: |
         aws cloudformation validate-template --template-body file://cft-template.yaml
+
     - name: Deploy CloudFormation stack
       id: deploy-stack
       run: |
         set +e
         aws cloudformation deploy \
           --template-file cft-template.yaml \
-          --stack-name dataops-stack \
-          --parameter-overrides DataLakeBucket=${{ env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ secrets.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
+          --stack-name ${{ env.STACK_NAME }} \
+          --parameter-overrides DataLakeBucket=${{ env.DATALAKE_BUCKET }} DataWarehouseBucket=${{ env.DATAWAREHOUSE_BUCKET }} GlueRoleArn=${{ env.GLUE_ROLE_ARN }} ScriptBucket=${{ env.SCRIPT_BUCKET }} \
           --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
           --no-fail-on-empty-changeset
         DEPLOY_STATUS=$?
         set -e
         echo "DEPLOY_STATUS=$DEPLOY_STATUS" >> $GITHUB_OUTPUT
-    # - name: Force delete stack if deployment failed
-    #   if: failure() || steps.deploy-stack.outputs.DEPLOY_STATUS != '0'
-    #   run: |
-    #     echo "Deployment failed or rollback occurred. Forcing stack deletion..."
-    #     aws cloudformation delete-stack --stack-name dataops-stack
-    #     echo "Waiting for stack to be deleted..."
-    #     aws cloudformation wait stack-delete-complete --stack-name dataops-stack
+
     - name: Get Workflow Name
       id: get-workflow-name
       if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
       run: |
-        WORKFLOW_NAME=$(aws cloudformation describe-stacks --stack-name dataops-stack --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" --output text)
+        WORKFLOW_NAME=$(aws cloudformation describe-stacks --stack-name ${{ env.STACK_NAME }} --query "Stacks[0].Outputs[?OutputKey=='WorkflowName'].OutputValue" --output text)
         echo "WORKFLOW_NAME=$WORKFLOW_NAME" >> $GITHUB_OUTPUT
 
     - name: Start Glue Workflow
       id: start-workflow
       if: success() && steps.deploy-stack.outputs.DEPLOY_STATUS == '0'
       run: |
-        WORKFLOW_RUN_ID=$(aws glue start-workflow-run --name ${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }} --query 'RunId' --output text)
+        WORKFLOW_NAME="${{ steps.get-workflow-name.outputs.WORKFLOW_NAME }}"
+        WORKFLOW_RUN_ID=$(aws glue start-workflow-run --name "$WORKFLOW_NAME" --query 'RunId' --output text)
         echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_OUTPUT
         echo "Workflow run ID: $WORKFLOW_RUN_ID"
 
